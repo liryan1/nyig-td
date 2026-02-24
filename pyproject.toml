@@ -1,0 +1,27 @@
+[project]
+name = "nyig-td"
+version = "0.1.0"
+description = "A minimal tournament pairing library for Python."
+readme = "README.md"
+authors = [
+    { name = "Ryan Li", email = "ryan.li@ny-go.org" }
+]
+requires-python = ">=3.14"
+dependencies = []
+keywords = ["tournament", "pairings", "single-elimination", "bracket", "swiss"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.2",
+]
