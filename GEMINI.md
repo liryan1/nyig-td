@@ -52,6 +52,21 @@ uv run mypy src
 
 ---
 
+## Release Process
+
+Automated releases are handled via GitHub Actions when pushing to the `main` branch.
+
+1. **Version Check:** A Git `pre-push` hook (`scripts/check_version.py`) prevents pushing to `main` if the version in `pyproject.toml` already exists on PyPI.
+2. **PyPI Publication:** The `Publish to PyPI` workflow builds the package and uses Trusted Publishing to upload to PyPI.
+3. **GitHub Release:** Upon successful publication, the workflow creates a GitHub Release tagged with the version (e.g., `v0.1.1`) and attaches the build artifacts.
+
+### Manual Version Check
+```bash
+uv run scripts/check_version.py
+```
+
+---
+
 ## Development Conventions
 
 1. **Type Safety:** The library is strictly typed using Python generics. Always ensure new code passes `mypy` checks.

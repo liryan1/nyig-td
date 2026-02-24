@@ -12,7 +12,8 @@ jobs:
     permissions:
       # Required for Trusted Publishing (OIDC)
       id-token: write
-      contents: read
+      # Required for creating GitHub Releases
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +26,23 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version =' pyproject.toml | cut -d '"' -f 2)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build package
         run: uv build
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.get_version.outputs.VERSION }}" \
+            --title "Release v${{ steps.get_version.outputs.VERSION }}" \
+            --generate-notes \
+            dist/*
