@@ -1,12 +1,13 @@
 # GEMINI.md
 
+Think customer first for tournament directors in go tournaments. Prioritize simple usage. Include detailed usage docs and implementation docs. Library can be consumed with no additional logic to create a stateless API.
+
 ## Project Overview
 
-`nyig-td` is a minimal, type-safe Python library for generating tournament pairings. It supports two main pairing formats:
-- **Single Elimination (Fixed Bracket):** Generates a tree-structured bracket following standard tournament seeding patterns (e.g., 1 vs 16, 8 vs 9).
-- **Swiss Pairings:** Implements score-based matching with history tracking to prevent repeat matches and automatic bye handling for odd numbers of participants.
+`nyig-td` is a minimal, type-safe Python library for generating tournament pairings. It currently focuses on Swiss pairings with advanced features like score-based matching, history tracking to prevent repeat matches, and automatic bye handling for odd numbers of participants.
 
 ### Technologies
+
 - **Language:** Python 3.14+
 - **Dependency Management:** [uv](https://github.com/astral-sh/uv)
 - **Testing:** pytest
@@ -19,11 +20,19 @@
 
 The project follows a clean, functional approach to pairing generation:
 
-- **`src/nyig_td/models.py`**: Defines core data structures using Python dataclasses.
-    - `Participant[T]`: A generic participant model (frozen) with an ID, name, and optional seed.
-    - `Match[T]`: A recursive structure representing a pairing or a node in a bracket tree.
-- **`src/nyig_td/single_elimination.py`**: Contains the `create_fixed_bracket` logic for tree-based single-elimination tournaments.
-- **`src/nyig_td/swiss.py`**: Contains `create_swiss_pairings` which uses a backtracking solver to find valid pairings based on score groups and match history.
+- **`src/nyig_td/models/`**: Defines core data structures using Python dataclasses.
+  - `Participant`: A frozen dataclass representing a player with an ID, name, optional seed, and metadata.
+  - `Match`: Represents a pairing. Includes helper properties like `is_bye` and `winner`.
+  - `Tournament`: Aggregate root. Manages participants/matches. Provides `get_participant(id)` and `create_round()`.
+  - `Standing`: Represents calculated results (rank, score, tie-breakers).
+  - `MetricsConfig`: Configuration for standings (tie-breakers, divisions, McMahon).
+- **`src/nyig_td/metrics.py`**: High-performance standings engine ($O(P+M)$).
+  - Calculates SOS, SODOS, and SOSOS using efficient pre-calculated mappings.
+  - Handles division-based grouping and ranking logic.
+- **`src/nyig_td/swiss.py`**: Swiss pairing algorithm.
+  - Recursive backtracking solver with greedy fallback.
+- **`src/nyig_td/mcmahon.py`**: McMahon pairing implementation.
+  - Initial McMahon Scores (MMS) based on player ranks with bar support.
 
 ---
 
@@ -32,16 +41,20 @@ The project follows a clean, functional approach to pairing generation:
 This project uses `uv` for all development tasks.
 
 ### Environment Setup
+
 ```bash
 uv sync
 ```
 
 ### Running Tests
+
 ```bash
-uv run pytest
+# Run tests with coverage report
+uv run pytest --cov=src --cov-report=term-missing
 ```
 
 ### Linting and Type Checking
+
 ```bash
 # Linting with ruff
 uv run ruff check .
@@ -56,11 +69,12 @@ uv run mypy src
 
 Automated releases are handled via GitHub Actions when pushing to the `main` branch.
 
-1. **Version Check:** A Git `pre-push` hook (`scripts/check_version.py`) prevents pushing to `main` if the version in `pyproject.toml` already exists on PyPI.
+1. **Version Check:** The script `scripts/check_version.py` is used to prevent pushing a version that already exists on PyPI.
 2. **PyPI Publication:** The `Publish to PyPI` workflow builds the package and uses Trusted Publishing to upload to PyPI.
-3. **GitHub Release:** Upon successful publication, the workflow creates a GitHub Release tagged with the version (e.g., `v0.1.1`) and attaches the build artifacts.
+3. **GitHub Release:** Upon successful publication, the workflow creates a GitHub Release tagged with the version (e.g., `v0.1.1`).
 
 ### Manual Version Check
+
 ```bash
 uv run scripts/check_version.py
 ```
@@ -69,21 +83,25 @@ uv run scripts/check_version.py
 
 ## Development Conventions
 
-1. **Type Safety:** The library is strictly typed using Python generics. Always ensure new code passes `mypy` checks.
-2. **Immutable Models:** `Participant` is a `frozen` dataclass. Do not attempt to modify participant state directly; use ID-based maps for external state (like scores or history).
-3. **Seeding:** Single elimination follows standard powers-of-two bracket expansion.
-4. **Swiss Logic:**
-    - Primary sort: Current score (descending).
-    - Secondary sort: Seed (ascending).
-    - Bye handling: The lowest-ranked player who hasn't had a bye receives it.
-    - Backtracking: The solver attempts to avoid repeat pairings before falling back to greedy matching.
+1. **Type Safety:** The library is strictly typed. Always ensure new code passes `mypy` checks.
+2. **Immutable Models:** `Participant` is a `frozen` dataclass. External state (like scores or history) should be managed using maps keyed by participant IDs.
+3. **Swiss Logic:**
+   - **Primary sort:** Current score (descending).
+   - **Secondary sort:** Seed (ascending).
+   - **Bye handling:** The lowest-ranked player who hasn't had a bye receives it.
+   - **Backtracking:** The solver attempts to avoid repeat pairings and satisfy custom constraints before falling back to greedy matching.
+4. **Testing:** Comprehensive scenario-based testing is preferred. Existing tests cover large multi-division tournaments, bye cycling, and realistic club-based constraints.
 
 ---
 
 ## Key Files
 
-- `src/nyig_td/models.py`: Core domain models.
-- `src/nyig_td/single_elimination.py`: Bracket generation logic.
+- `src/nyig_td/models/`: Core domain models (Participant, Match, Tournament, Standing, MetricsConfig).
+- `src/nyig_td/metrics.py`: Metrics engine and standings calculation.
 - `src/nyig_td/swiss.py`: Swiss pairing algorithm.
-- `tests/test_fixed_bracket.py`: Bracket logic verification.
-- `tests/test_swiss.py`: Swiss pairing logic and edge case verification.
+- `src/nyig_td/mcmahon.py`: McMahon pairing algorithm.
+- `tests/test_metrics.py`: Tests for standings and tie-breakers.
+- `tests/test_swiss_scenarios.py`: Comprehensive Swiss pairing logic and edge case verification.
+- `tests/test_mcmahon.py`: Tests for McMahon pairing logic.
+- `scripts/check_version.py`: PyPI version verification script.
+- `pyproject.toml`: Project metadata and tool configurations.

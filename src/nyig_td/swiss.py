@@ -1,25 +1,26 @@
-from typing import TypeVar, Optional, List, Dict, Set
-from .models import Participant, Match
+from typing import Callable
 
-T = TypeVar("T")
+from .models import Match, Participant
 
 
 def create_swiss_pairings(
-    participants: List[Participant[T]],
-    scores: Dict[T, float],
-    history: Dict[T, Set[T]],
+    participants: list[Participant],
+    scores: dict[str, float],
+    history: dict[str, set[str]],
     round_number: int,
-    bye_history: Set[T],
-) -> List[Match[T]]:
+    bye_history: set[str],
+    constraint_fn: Callable[[Participant, Participant], bool] | None = None,
+) -> list[Match]:
     """
     Creates pairings for a Swiss round.
 
     Args:
-        participants: List of all participants.
+        participants: list of all participants.
         scores: Current scores of participants.
         history: Map of participant ID to set of IDs they have already played.
         round_number: The round number for the new matches.
-        bye_history: Set of participant IDs who have already received a bye.
+        bye_history: set of participant IDs who have already received a bye.
+        constraint_fn: Optional function that takes two participants and returns True if they can be paired.
 
     Returns:
         A list of Match objects for the round.
@@ -38,7 +39,7 @@ def create_swiss_pairings(
         reverse=True,
     )
 
-    pairings: List[Match[T]] = []
+    pairings: list[Match] = []
     to_pair = list(sorted_players)
 
     # Handle bye if odd number of participants
@@ -57,7 +58,7 @@ def create_swiss_pairings(
         bye_player = to_pair.pop(bye_player_idx)
         pairings.append(Match(p1=bye_player, p2=None, round=round_number))
 
-    def solve(players: List[Participant[T]]) -> Optional[List[Match[T]]]:
+    def solve(players: list[Participant]) -> list[Match] | None:
         if not players:
             return []
 
@@ -65,24 +66,41 @@ def create_swiss_pairings(
         # Try to pair p1 with someone
         for i in range(1, len(players)):
             p2 = players[i]
-            if p2.id not in history.get(p1.id, set()):
-                # Potential match
-                remaining = players[1:i] + players[i + 1 :]
-                res = solve(remaining)
-                if res is not None:
-                    return [Match(p1=p1, p2=p2, round=round_number)] + res
+            # Standard constraint: don't play same person twice
+            if p2.id in history.get(p1.id, set()):
+                continue
+
+            # Custom constraints (e.g., club mates)
+            if constraint_fn and not constraint_fn(p1, p2):
+                continue
+
+            # Potential match
+            remaining = players[1:i] + players[i + 1 :]
+            res = solve(remaining)
+            if res is not None:
+                return [Match(p1=p1, p2=p2, round=round_number)] + res
         return None
 
     result = solve(to_pair)
     if result is None:
-        # Fallback: pair them greedily even if they played before.
+        # Fallback: pair them greedily ignoring custom constraints but still respecting history if possible.
+        # This is a simple fallback for when the constraints are too tight.
         result = []
         temp_to_pair = list(to_pair)
         while temp_to_pair:
             p1 = temp_to_pair.pop(0)
             if temp_to_pair:
-                p2 = temp_to_pair.pop(0)
-                result.append(Match(p1=p1, p2=p2, round=round_number))
+                # Still try to find someone p1 hasn't played
+                found = False
+                for i in range(len(temp_to_pair)):
+                    if temp_to_pair[i].id not in history.get(p1.id, set()):
+                        p2 = temp_to_pair.pop(i)
+                        result.append(Match(p1=p1, p2=p2, round=round_number))
+                        found = True
+                        break
+                if not found:
+                    p2 = temp_to_pair.pop(0)
+                    result.append(Match(p1=p1, p2=p2, round=round_number))
             else:
                 result.append(Match(p1=p1, p2=None, round=round_number))
 
