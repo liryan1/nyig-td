@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv
+.coverage
+
+# Node
+node_modules/
+*.log
+coverage/
+
+# Environment
+.env
+
+# OS
+.DS_Store

@@ -1,0 +1,40 @@
+[project]
+name = "nyig-td"
+version = "0.1.2"
+description = "Tournament director tools for Go tournaments"
+readme = "README.md"
+authors = [
+    { name = "Ryan Li", email = "ryan.li@ny-go.org" }
+]
+requires-python = ">=3.14"
+dependencies = []
+keywords = ["go", "baduk", "weiqi", "tournament", "swiss", "mcmahon"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=nyig_td --cov-report=term-missing"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.mypy]
+python_version = "3.14"
+strict = true

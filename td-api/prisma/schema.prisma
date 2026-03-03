@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  rank      String
+  club      String?
+  agaId     String?
+  rating    Int?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([agaId])
+}
+
+model Tournament {
+  id            String               @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  date          DateTime
+  location      String?
+  status        String               @default("setup")
+  settings      TournamentSettings
+  divisions     Division[]
+  registrations PlayerRegistration[]
+  rounds        Round[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([date])
+  @@index([status])
+}
+
+type Division {
+  id          String
+  name        String
+  description String?
+}
+
+type TournamentSettings {
+  numRounds            Int
+  pairingAlgorithm     String  @default("mcmahon")
+  standingsWeights     StandingsWeights
+  handicapEnabled      Boolean @default(true)
+  handicapReduction    Int     @default(0)
+  mcmahonBar           String?
+  crossDivisionPairing Boolean @default(true)
+}
+
+type StandingsWeights {
+  wins        Float @default(1.0)
+  sos         Float @default(0.1)
+  sodos       Float @default(0.0)
+  extendedSos Float @default(0.0)
+}
+
+type PlayerRegistration {
+  playerId            String   @db.ObjectId
+  divisionId          String?
+  roundsParticipating Int[]
+  registeredAt        DateTime @default(now())
+  withdrawn           Boolean  @default(false)
+}
+
+type Round {
+  number      Int
+  status      String    @default("pending")
+  pairings    Pairing[]
+  byes        Bye[]
+  pairedAt    DateTime?
+  completedAt DateTime?
+}
+
+type Pairing {
+  blackPlayerId  String @db.ObjectId
+  whitePlayerId  String @db.ObjectId
+  boardNumber    Int
+  handicapStones Int    @default(0)
+  komi           Float  @default(7.5)
+  result         String @default("NR")
+}
+
+type Bye {
+  playerId String @db.ObjectId
+  points   Float  @default(1.0)
+}
