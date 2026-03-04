@@ -9,6 +9,7 @@ import {
   manualPairSchema,
   createDivisionSchema,
   updateDivisionSchema,
+  bulkRegisterSchema,
 } from '../utils/validation.js';
 import type { GameResult } from '../types/index.js';
 
@@ -99,6 +100,22 @@ router.post('/:id/registrations', async (req, res, next) => {
       return;
     }
     res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Bulk register players
+router.post('/:id/registrations/bulk', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const data = bulkRegisterSchema.parse(req.body);
+    const result = await tournamentService.bulkRegister(id, data.players);
+    if (!result) {
+      res.status(404).json({ error: 'Tournament not found' });
+      return;
+    }
+    res.json(result);
   } catch (error) {
     next(error);
   }

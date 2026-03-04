@@ -76,6 +76,9 @@ export function RoundManager({
   const unpairedPlayers = getUnpairedPlayers();
   const canUnpair = round && round.status !== 'completed';
 
+  const prevRound = tournament.rounds.find((r) => r.number === activeRound - 1);
+  const previousRoundCompleted = activeRound === 1 || !prevRound || prevRound.status === 'completed';
+
   const togglePlayer = (playerId: string) => {
     setSelectedPlayers((prev) => {
       const next = new Set(prev);
@@ -201,7 +204,7 @@ export function RoundManager({
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={selectedPlayers.size !== 2}
+                    disabled={selectedPlayers.size !== 2 || !previousRoundCompleted}
                     onClick={handlePairSelected}
                   >
                     Pair Selected
@@ -209,7 +212,7 @@ export function RoundManager({
                   <Button
                     size="sm"
                     onClick={() => onGeneratePairings(round.number)}
-                    disabled={isPairing}
+                    disabled={isPairing || !previousRoundCompleted}
                   >
                     {isPairing
                       ? 'Pairing...'
@@ -218,6 +221,11 @@ export function RoundManager({
                         : 'Generate Pairings'}
                   </Button>
                 </div>
+                {!previousRoundCompleted && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Complete round {activeRound - 1} before pairing round {activeRound}
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

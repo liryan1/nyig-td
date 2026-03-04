@@ -962,6 +962,78 @@ describe('TournamentService', () => {
           'Round 1 cannot be paired (status: completed)'
         );
       });
+
+      it('should throw error if previous round is not completed', async () => {
+        const tournament = createTournamentData({
+          registrations: [
+            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          ],
+          rounds: [
+            { number: 1, status: 'in_progress', pairings: [
+              { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 7.5, result: 'NR' },
+            ], byes: [] },
+            { number: 2, status: 'pending', pairings: [], byes: [] },
+          ],
+        });
+        mockTournamentFindUnique.mockResolvedValue(tournament);
+
+        await expect(service.generatePairings('507f1f77bcf86cd799439011', 2)).rejects.toThrow(
+          'Previous round 1 must be completed before pairing round 2'
+        );
+      });
+
+      it('should allow pairing round 1 without previous round check', async () => {
+        const tournament = createTournamentData({
+          registrations: [
+            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          ],
+          rounds: [
+            { number: 1, status: 'pending', pairings: [], byes: [] },
+            { number: 2, status: 'pending', pairings: [], byes: [] },
+          ],
+        });
+        mockTournamentFindUnique.mockResolvedValue(tournament);
+        mockPlayerFindMany.mockResolvedValue([
+          createPlayerData('p1', 'Player 1', '3d'),
+          createPlayerData('p2', 'Player 2', '2d'),
+        ]);
+        mockGeneratePairings.mockResolvedValue({
+          pairings: [
+            { black_player_id: 'p1', white_player_id: 'p2', board_number: 1, handicap_stones: 0, komi: 7.5 },
+          ],
+          byes: [],
+        });
+        mockTournamentUpdate.mockResolvedValue(tournament);
+
+        const result = await service.generatePairings('507f1f77bcf86cd799439011', 1);
+        expect(result.status).toBe('paired');
+      });
+    });
+  });
+
+  // ==================== Manual Pair ====================
+
+  describe('manualPair', () => {
+    it('should throw error if previous round is not completed', async () => {
+      const tournament = createTournamentData({
+        registrations: [
+          { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+        ],
+        rounds: [
+          { number: 1, status: 'paired', pairings: [
+            { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 7.5, result: 'NR' },
+          ], byes: [] },
+          { number: 2, status: 'pending', pairings: [], byes: [] },
+        ],
+      });
+      mockTournamentFindUnique.mockResolvedValue(tournament);
+
+      await expect(service.manualPair('507f1f77bcf86cd799439011', 2, 'p1', 'p2')).rejects.toThrow(
+        'Previous round 1 must be completed before pairing round 2'
+      );
     });
   });
 

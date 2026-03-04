@@ -8,14 +8,7 @@ See README.md for acronym definitions.
   
 - Show pairing page - public link to players. TD can publish/unpublish pairings.
 - Scan QR code or visit link for players to checkin. Allow TD to checkin one player and bulk check-in multiple players. Only checked in players can be paired
-- Pairing disabled if previous round was not marked as completed
-- Support bulk player upload: CSV format. Show confirmation screen of players that will be created, and count of players that will be added.
 - Support slide and Fold pairing format. TD can change this after tournament creation.
-
-## UI
-
-- Players can be fetched all, small dataset, player search should not rerender on each key stroke, front end filter by player name or AGA ID
-- Player registration page should show individual checkboxes of each round and allow selection of participating in each round or not. Add a save changes to reduce API calls. Warn TD if they will navigate away with unsaved changes.
 
 ## Done
 
@@ -25,3 +18,7 @@ See README.md for acronym definitions.
 - [x] Add VS code settings so that pairing-api and lib directories look for the python interpreters in their respective .venv folders
 - [x] Don't close register player dialog on add player
 - [x] Make AGA ID field required and unique
+- [x] Player registration page should show individual checkboxes of each round and allow selection of participating in each round or not. Add a save changes to reduce API calls. Warn TD if they will navigate away with unsaved changes.
+- [x] Players can be fetched all, small dataset, player search should not rerender on each key stroke, front end filter by player name or AGA ID
+- [x] Support bulk player register: CSV format. Show confirmation screen of players that will be created, and count of players that will be added. Show players with different name than in DB.
+- [x] Pairing disabled if previous round was not marked as completed

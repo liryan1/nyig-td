@@ -6,6 +6,7 @@ import {
   updateTournament,
   listPlayers,
   registerPlayer,
+  bulkRegisterPlayers,
   withdrawPlayer,
   updateRegistration,
   generatePairings,
@@ -47,6 +48,7 @@ import { Spinner } from '@/components/Spinner';
 import { RegistrationTable } from '@/components/tournament/RegistrationTable';
 import { RoundManager } from '@/components/tournament/RoundManager';
 import { StandingsTable } from '@/components/tournament/StandingsTable';
+import { BulkRegisterDialog } from '@/components/tournament/BulkRegisterDialog';
 import { TiebreakerOrderEditor } from '@/components/tournament/TiebreakerOrderEditor';
 import type { Tournament, Player, Division, GameResult, TiebreakerCriteria } from '@/types';
 
@@ -54,6 +56,7 @@ export function TournamentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
+  const [showBulkRegister, setShowBulkRegister] = useState(false);
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
   const [hasPendingRoundChanges, setHasPendingRoundChanges] = useState(false);
 
@@ -95,6 +98,16 @@ export function TournamentDetailPage() {
       registerPlayer(id!, playerId, roundsParticipating, divisionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+    },
+  });
+
+  const bulkRegisterMutation = useMutation({
+    mutationFn: (players: Array<{ name: string; agaId: string; rank: string; club?: string; email?: string }>) =>
+      bulkRegisterPlayers(id!, players),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      setShowBulkRegister(false);
     },
   });
 
@@ -214,9 +227,14 @@ export function TournamentDetailPage() {
               <CardTitle>
                 Registered Players ({tournament.registrations.filter(r => !r.withdrawn).length})
               </CardTitle>
-              <Button onClick={() => setShowRegister(true)}>
-                Register Player
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowBulkRegister(true)}>
+                  Import CSV
+                </Button>
+                <Button onClick={() => setShowRegister(true)}>
+                  Register Player
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <RegistrationTable
@@ -330,6 +348,15 @@ export function TournamentDetailPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <BulkRegisterDialog
+        open={showBulkRegister}
+        onOpenChange={setShowBulkRegister}
+        allPlayers={allPlayers || []}
+        registeredPlayerIds={registeredPlayerIds}
+        onConfirm={(players) => bulkRegisterMutation.mutate(players)}
+        isLoading={bulkRegisterMutation.isPending}
+      />
 
       <Dialog open={blocker.state === 'blocked'} onOpenChange={() => blocker.reset?.()}>
         <DialogContent>

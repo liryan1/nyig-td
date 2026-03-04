@@ -117,6 +117,17 @@ export async function withdrawPlayer(tournamentId: string, playerId: string): Pr
   return response.data.tournament;
 }
 
+export async function bulkRegisterPlayers(
+  tournamentId: string,
+  players: Array<{ name: string; agaId: string; rank: string; club?: string; email?: string }>
+): Promise<{ tournament: Tournament; created: Player[]; alreadyRegistered: string[] }> {
+  const response = await api.post<{ tournament: Tournament; created: Player[]; alreadyRegistered: string[] }>(
+    `/tournaments/${tournamentId}/registrations/bulk`,
+    { players }
+  );
+  return response.data;
+}
+
 // ========== Rounds ==========
 
 export async function generatePairings(tournamentId: string, roundNumber: number): Promise<Round> {

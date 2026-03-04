@@ -25,6 +25,13 @@ export class PlayerService {
     });
   }
 
+  async findByAgaIds(agaIds: string[]) {
+    if (agaIds.length === 0) return [];
+    return prisma.player.findMany({
+      where: { agaId: { in: agaIds } },
+    });
+  }
+
   async get(id: string) {
     return prisma.player.findUnique({
       where: { id },

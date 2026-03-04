@@ -60,6 +60,18 @@ export const recordResultSchema = z.object({
   result: z.enum(['B+', 'W+', 'B+F', 'W+F', 'Draw', 'NR', 'BL']),
 });
 
+export const bulkRegisterSchema = z.object({
+  players: z.array(
+    z.object({
+      name: z.string().min(1, 'Name is required').max(100),
+      agaId: z.string().min(1).max(20),
+      rank: rankSchema,
+      club: z.string().max(100).optional(),
+      email: z.string().email().optional(),
+    })
+  ).min(1, 'At least one player is required'),
+});
+
 export const manualPairSchema = z.object({
   player1Id: z.string().min(1),
   player2Id: z.string().min(1),
@@ -78,3 +90,4 @@ export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
 export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 export type RegisterPlayerInput = z.infer<typeof registerPlayerSchema>;
 export type RecordResultInput = z.infer<typeof recordResultSchema>;
+export type BulkRegisterInput = z.infer<typeof bulkRegisterSchema>;

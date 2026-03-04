@@ -28,6 +28,7 @@ export const updateTournament = api.updateTournament;
 export const deleteTournament = api.deleteTournament;
 
 export const registerPlayer = api.registerPlayer;
+export const bulkRegisterPlayers = api.bulkRegisterPlayers;
 export const withdrawPlayer = api.withdrawPlayer;
 export const updatePlayerRounds = api.updatePlayerRounds;
 export const updateRegistration = api.updateRegistration;

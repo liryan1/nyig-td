@@ -22,6 +22,7 @@ const mockGetStandings: MockFn = jest.fn();
 const mockAddDivision: MockFn = jest.fn();
 const mockUpdateDivision: MockFn = jest.fn();
 const mockRemoveDivision: MockFn = jest.fn();
+const mockBulkRegister: MockFn = jest.fn();
 
 jest.mock('../../src/services/index.js', () => ({
   tournamentService: {
@@ -33,6 +34,7 @@ jest.mock('../../src/services/index.js', () => ({
     registerPlayer: (...args: unknown[]) => mockRegisterPlayer(...args),
     withdrawPlayer: (...args: unknown[]) => mockWithdrawPlayer(...args),
     updateRegistration: (...args: unknown[]) => mockUpdateRegistration(...args),
+    bulkRegister: (...args: unknown[]) => mockBulkRegister(...args),
     generatePairings: (...args: unknown[]) => mockGeneratePairings(...args),
     recordResult: (...args: unknown[]) => mockRecordResult(...args),
     getStandings: (...args: unknown[]) => mockGetStandings(...args),
@@ -332,6 +334,122 @@ describe('Tournament Routes', () => {
         .send({});
 
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('POST /api/tournaments/:id/registrations/bulk', () => {
+    it('should bulk register players', async () => {
+      const result = {
+        tournament: createTournamentData({
+          registrations: [
+            { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'player2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          ],
+        }),
+        created: [{ id: 'player2', name: 'Jane Smith', agaId: '67890', rank: '3d' }],
+        alreadyRegistered: [],
+      };
+      mockBulkRegister.mockResolvedValue(result);
+
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [
+            { name: 'John Doe', agaId: '12345', rank: '5k' },
+            { name: 'Jane Smith', agaId: '67890', rank: '3d' },
+          ],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.tournament.registrations).toHaveLength(2);
+      expect(response.body.created).toHaveLength(1);
+      expect(response.body.alreadyRegistered).toHaveLength(0);
+    });
+
+    it('should return already registered AGA IDs', async () => {
+      const result = {
+        tournament: createTournamentData({
+          registrations: [
+            { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          ],
+        }),
+        created: [],
+        alreadyRegistered: ['12345'],
+      };
+      mockBulkRegister.mockResolvedValue(result);
+
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe', agaId: '12345', rank: '5k' }],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.alreadyRegistered).toEqual(['12345']);
+    });
+
+    it('should return 404 for non-existent tournament', async () => {
+      mockBulkRegister.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/tournaments/nonexistent/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe', agaId: '12345', rank: '5k' }],
+        });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 400 for empty players array', async () => {
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({ players: [] });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe' }],
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid rank format', async () => {
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe', agaId: '12345', rank: 'invalid' }],
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid ranks from service', async () => {
+      mockBulkRegister.mockRejectedValue(new Error('Invalid ranks: xyz'));
+
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe', agaId: '12345', rank: '5k' }],
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should handle service errors', async () => {
+      mockBulkRegister.mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app)
+        .post('/api/tournaments/507f1f77bcf86cd799439011/registrations/bulk')
+        .send({
+          players: [{ name: 'John Doe', agaId: '12345', rank: '5k' }],
+        });
+
+      expect(response.status).toBe(500);
     });
   });
 

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '../prisma/client.js';
+import { playerService } from './playerService.js';
 import { nyigTdClient, type PlayerInput, type RoundInput } from './nyigTdClient.js';
 import type { CreateTournamentInput, UpdateTournamentInput } from '../utils/validation.js';
 import type { GameResult, Round, RoundStatus, PairingResult, Bye, PlayerStanding, Division } from '../types/index.js';
@@ -215,6 +216,89 @@ export class TournamentService {
     });
   }
 
+  async bulkRegister(
+    tournamentId: string,
+    players: Array<{ name: string; agaId: string; rank: string; club?: string; email?: string }>
+  ) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    // Validate all ranks in one batch
+    const ranks = players.map((p) => p.rank);
+    const validation = await nyigTdClient.validateRanks(ranks);
+    if (!validation.all_valid) {
+      const invalid = validation.results.filter((r) => !r.valid);
+      throw new Error(`Invalid ranks: ${invalid.map((r) => r.rank).join(', ')}`);
+    }
+
+    // Look up existing players by AGA IDs
+    const agaIds = players.map((p) => p.agaId);
+    const existingPlayers = await playerService.findByAgaIds(agaIds);
+    const existingByAgaId = new Map(existingPlayers.map((p) => [p.agaId, p]));
+
+    // Determine which players need to be created
+    const toCreate = players.filter((p) => !existingByAgaId.has(p.agaId));
+
+    // Create missing players
+    const createdPlayers = [];
+    if (toCreate.length > 0) {
+      for (const p of toCreate) {
+        const normalizedRank = (
+          validation.results.find((r) => r.rank === p.rank)?.normalized || p.rank
+        ).toLowerCase();
+        const created = await prisma.player.create({
+          data: {
+            name: p.name,
+            rank: normalizedRank,
+            club: p.club,
+            agaId: p.agaId,
+            email: p.email,
+          },
+        });
+        createdPlayers.push(created);
+        existingByAgaId.set(created.agaId, created);
+      }
+    }
+
+    // Determine which players are already registered
+    const registeredPlayerIds = new Set(
+      tournament.registrations.filter((r) => !r.withdrawn).map((r) => r.playerId)
+    );
+
+    const alreadyRegistered: string[] = [];
+    const newRegistrations = [...tournament.registrations];
+
+    for (const p of players) {
+      const dbPlayer = existingByAgaId.get(p.agaId);
+      if (!dbPlayer) continue;
+
+      if (registeredPlayerIds.has(dbPlayer.id)) {
+        alreadyRegistered.push(p.agaId);
+        continue;
+      }
+
+      newRegistrations.push({
+        playerId: dbPlayer.id,
+        divisionId: null,
+        roundsParticipating: [],
+        registeredAt: new Date(),
+        withdrawn: false,
+      });
+      registeredPlayerIds.add(dbPlayer.id);
+    }
+
+    const updatedTournament = await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { registrations: newRegistrations },
+    });
+
+    return {
+      tournament: updatedTournament,
+      created: createdPlayers,
+      alreadyRegistered,
+    };
+  }
+
   async withdrawPlayer(tournamentId: string, playerId: string) {
     const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
     if (!tournament) return null;
@@ -347,6 +431,13 @@ export class TournamentService {
       throw new Error(`Cannot add pairings to a completed round`);
     }
 
+    if (roundNumber > 1) {
+      const prevRound = tournament.rounds.find((r) => r.number === roundNumber - 1);
+      if (prevRound && prevRound.status !== 'completed') {
+        throw new Error(`Previous round ${roundNumber - 1} must be completed before pairing round ${roundNumber}`);
+      }
+    }
+
     // Validate neither player is already paired in this round
     const pairedPlayerIds = new Set<string>();
     for (const p of round.pairings) {
@@ -477,6 +568,13 @@ export class TournamentService {
     const round = tournament.rounds[roundIdx];
     if (round.status !== 'pending' && round.status !== 'paired') {
       throw new Error(`Round ${roundNumber} cannot be paired (status: ${round.status})`);
+    }
+
+    if (roundNumber > 1) {
+      const prevRound = tournament.rounds.find((r) => r.number === roundNumber - 1);
+      if (prevRound && prevRound.status !== 'completed') {
+        throw new Error(`Previous round ${roundNumber - 1} must be completed before pairing round ${roundNumber}`);
+      }
     }
 
     // Get already-paired player IDs

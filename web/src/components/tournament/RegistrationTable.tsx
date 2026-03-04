@@ -1,4 +1,6 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -19,93 +21,234 @@ import type { PlayerRegistration, Player, Division } from '@/types';
 interface RegistrationTableProps {
   registrations: PlayerRegistration[];
   divisions?: Division[];
+  numRounds?: number;
   onWithdraw: (playerId: string) => void;
   onChangeDivision?: (playerId: string, divisionId: string | null) => void;
+  onSaveRounds?: (changes: Array<{ playerId: string; roundsParticipating: number[] }>) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
+  isSaving?: boolean;
 }
 
-export function RegistrationTable({ registrations, divisions, onWithdraw, onChangeDivision }: RegistrationTableProps) {
+function arraysEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export function RegistrationTable({
+  registrations,
+  divisions,
+  numRounds,
+  onWithdraw,
+  onChangeDivision,
+  onSaveRounds,
+  onDirtyChange,
+  isSaving,
+}: RegistrationTableProps) {
   const activeRegistrations = registrations.filter((r) => !r.withdrawn);
   const hasDivisions = divisions && divisions.length > 0;
+  const hasRoundEditing = numRounds != null && numRounds > 0 && onSaveRounds;
+
+  const [roundOverrides, setRoundOverrides] = useState<Map<string, number[]>>(new Map());
+  const isDirty = roundOverrides.size > 0;
+
+  // Notify parent of dirty state changes
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Clear overrides when server data changes (after successful save)
+  const serverFingerprint = activeRegistrations
+    .map((r) => {
+      const pid = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
+      return `${pid}:${r.roundsParticipating.join(',')}`;
+    })
+    .join('|');
+
+  useEffect(() => {
+    setRoundOverrides(new Map());
+  }, [serverFingerprint]);
+
+  // beforeunload warning when dirty
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const toggleRound = useCallback(
+    (playerId: string, round: number, serverRounds: number[], allRounds: number[]) => {
+      setRoundOverrides((prev) => {
+        const next = new Map(prev);
+        const current = next.get(playerId) ?? (serverRounds.length === 0 ? [...allRounds] : [...serverRounds]);
+        const idx = current.indexOf(round);
+        let updated: number[];
+        if (idx >= 0) {
+          updated = current.filter((r) => r !== round);
+        } else {
+          updated = [...current, round].sort((a, b) => a - b);
+        }
+
+        // Normalize: if all rounds checked, use [] (API convention)
+        const normalized = arraysEqual(updated, allRounds) ? [] : updated;
+        const serverNormalized = serverRounds.length === 0 ? [] : serverRounds;
+
+        // If result matches server state, remove override
+        if (arraysEqual(normalized, serverNormalized)) {
+          next.delete(playerId);
+        } else {
+          next.set(playerId, normalized);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleSave = () => {
+    if (!onSaveRounds) return;
+    const changes = Array.from(roundOverrides.entries()).map(([playerId, roundsParticipating]) => ({
+      playerId,
+      roundsParticipating,
+    }));
+    onSaveRounds(changes);
+  };
+
+  const handleDiscard = () => {
+    setRoundOverrides(new Map());
+  };
 
   if (activeRegistrations.length === 0) {
     return <p className="text-muted-foreground">No players registered yet.</p>;
   }
 
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Rank</TableHead>
-          <TableHead>Club</TableHead>
-          {hasDivisions && <TableHead>Division</TableHead>}
-          <TableHead>Rounds</TableHead>
-          <TableHead></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {activeRegistrations.map((reg) => {
-          const player = reg.playerId as Player;
-          const playerId = typeof reg.playerId === 'string' ? reg.playerId : player.id;
+  const allRounds = hasRoundEditing
+    ? Array.from({ length: numRounds }, (_, i) => i + 1)
+    : [];
 
-          return (
-            <TableRow key={playerId}>
-              <TableCell className="font-medium">
-                {typeof player === 'string' ? playerId : player.name}
-              </TableCell>
-              <TableCell>{typeof player === 'string' ? '-' : player.rank}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {typeof player === 'string' ? '-' : player.club || '-'}
-              </TableCell>
-              {hasDivisions && (
+  return (
+    <div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Rank</TableHead>
+            <TableHead>Club</TableHead>
+            {hasDivisions && <TableHead>Division</TableHead>}
+            <TableHead>Rounds</TableHead>
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {activeRegistrations.map((reg) => {
+            const player = reg.playerId as Player;
+            const playerId = typeof reg.playerId === 'string' ? reg.playerId : player.id;
+            const serverRounds = reg.roundsParticipating;
+            const effectiveRounds = roundOverrides.has(playerId)
+              ? roundOverrides.get(playerId)!
+              : serverRounds;
+
+            return (
+              <TableRow key={playerId}>
+                <TableCell className="font-medium">
+                  {typeof player === 'string' ? playerId : player.name}
+                </TableCell>
+                <TableCell>{typeof player === 'string' ? '-' : player.rank}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {typeof player === 'string' ? '-' : player.club || '-'}
+                </TableCell>
+                {hasDivisions && (
+                  <TableCell>
+                    {onChangeDivision ? (
+                      <Select
+                        value={reg.divisionId ?? 'none'}
+                        onValueChange={(value) =>
+                          onChangeDivision(playerId, value === 'none' ? null : value)
+                        }
+                      >
+                        <SelectTrigger className="w-32" aria-label="Division">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {divisions!.map((div) => (
+                            <SelectItem key={div.id} value={div.id}>
+                              {div.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {reg.divisionId
+                          ? divisions!.find((d) => d.id === reg.divisionId)?.name ?? '—'
+                          : '—'}
+                      </span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
-                  {onChangeDivision ? (
-                    <Select
-                      value={reg.divisionId ?? 'none'}
-                      onValueChange={(value) =>
-                        onChangeDivision(playerId, value === 'none' ? null : value)
-                      }
-                    >
-                      <SelectTrigger className="w-32" aria-label="Division">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {divisions!.map((div) => (
-                          <SelectItem key={div.id} value={div.id}>
-                            {div.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {hasRoundEditing ? (
+                    <div className="flex gap-2">
+                      {allRounds.map((round) => {
+                        const isChecked =
+                          effectiveRounds.length === 0
+                            ? true
+                            : effectiveRounds.includes(round);
+                        return (
+                          <label key={round} className="flex items-center gap-1 text-sm">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={() =>
+                                toggleRound(playerId, round, serverRounds, allRounds)
+                              }
+                              disabled={isSaving}
+                              aria-label={`R${round} for ${typeof player === 'string' ? playerId : player.name}`}
+                            />
+                            R{round}
+                          </label>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <span className="text-muted-foreground">
-                      {reg.divisionId
-                        ? divisions!.find((d) => d.id === reg.divisionId)?.name ?? '—'
-                        : '—'}
+                      {reg.roundsParticipating.length > 0
+                        ? reg.roundsParticipating.join(', ')
+                        : 'All'}
                     </span>
                   )}
                 </TableCell>
-              )}
-              <TableCell className="text-muted-foreground">
-                {reg.roundsParticipating.length > 0
-                  ? reg.roundsParticipating.join(', ')
-                  : 'All'}
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => onWithdraw(playerId)}
-                >
-                  Withdraw
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => onWithdraw(playerId)}
+                  >
+                    Withdraw
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+
+      {hasRoundEditing && isDirty && (
+        <div className="sticky bottom-0 bg-background border-t p-4 flex items-center justify-end gap-2 mt-2">
+          <Button variant="outline" onClick={handleDiscard} disabled={isSaving}>
+            Discard
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

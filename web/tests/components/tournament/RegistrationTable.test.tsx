@@ -44,12 +44,12 @@ describe('RegistrationTable', () => {
     expect(screen.getByText('Brooklyn Go')).toBeInTheDocument();
   });
 
-  it('shows "All" for empty roundsParticipating', () => {
+  it('shows "All" for empty roundsParticipating when no numRounds', () => {
     render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
     expect(screen.getByText('All')).toBeInTheDocument();
   });
 
-  it('shows specific rounds when set', () => {
+  it('shows specific rounds as text when no numRounds', () => {
     render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
     expect(screen.getByText('1, 3')).toBeInTheDocument();
   });
@@ -208,5 +208,168 @@ describe('RegistrationTable', () => {
     await user.click(noneOption);
 
     expect(onChangeDivision).toHaveBeenCalledWith('p1', null);
+  });
+
+  describe('round checkboxes', () => {
+    const allRoundsRegs: PlayerRegistration[] = [
+      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
+      { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
+    ];
+
+    it('renders round checkboxes when numRounds and onSaveRounds are provided', () => {
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+        />
+      );
+      // Alice has all rounds (roundsParticipating=[]), all 4 checkboxes should be checked
+      const aliceR1 = screen.getByRole('checkbox', { name: 'R1 for Alice Chen' });
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      expect(aliceR1).toBeChecked();
+      expect(aliceR4).toBeChecked();
+
+      // Bob has rounds [1, 3], so R2 and R4 should be unchecked
+      const bobR1 = screen.getByRole('checkbox', { name: 'R1 for Bob Kim' });
+      const bobR2 = screen.getByRole('checkbox', { name: 'R2 for Bob Kim' });
+      const bobR3 = screen.getByRole('checkbox', { name: 'R3 for Bob Kim' });
+      const bobR4 = screen.getByRole('checkbox', { name: 'R4 for Bob Kim' });
+      expect(bobR1).toBeChecked();
+      expect(bobR2).not.toBeChecked();
+      expect(bobR3).toBeChecked();
+      expect(bobR4).not.toBeChecked();
+    });
+
+    it('shows Save Changes button after toggling a checkbox', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+        />
+      );
+
+      // Initially no save button
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+
+      // Uncheck R4 for Alice
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4);
+
+      // Save button should now appear
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+      expect(screen.getByText('Discard')).toBeInTheDocument();
+    });
+
+    it('clears changes when Discard is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+        />
+      );
+
+      // Uncheck R4 for Alice
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4);
+      expect(aliceR4).not.toBeChecked();
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+
+      // Click discard
+      await user.click(screen.getByText('Discard'));
+
+      // Save button should be gone, checkbox should be checked again
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+      expect(aliceR4).toBeChecked();
+    });
+
+    it('calls onSaveRounds with correct data when Save Changes is clicked', async () => {
+      const onSaveRounds = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={onSaveRounds}
+        />
+      );
+
+      // Uncheck R4 for Alice (she had all rounds = [])
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4);
+
+      // Click save
+      await user.click(screen.getByText('Save Changes'));
+
+      expect(onSaveRounds).toHaveBeenCalledWith([
+        { playerId: 'p1', roundsParticipating: [1, 2, 3] },
+      ]);
+    });
+
+    it('removes override when toggling back to server state', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+        />
+      );
+
+      // Uncheck then re-check R4 for Alice
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4); // uncheck
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+      await user.click(aliceR4); // re-check
+
+      // Should no longer be dirty
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+    });
+
+    it('calls onDirtyChange when dirty state changes', async () => {
+      const onDirtyChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+          onDirtyChange={onDirtyChange}
+        />
+      );
+
+      // Initially called with false
+      expect(onDirtyChange).toHaveBeenCalledWith(false);
+
+      // Toggle a checkbox
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4);
+      expect(onDirtyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('disables checkboxes when isSaving is true', () => {
+      render(
+        <RegistrationTable
+          registrations={allRoundsRegs}
+          numRounds={4}
+          onWithdraw={() => {}}
+          onSaveRounds={() => {}}
+          isSaving={true}
+        />
+      );
+
+      const aliceR1 = screen.getByRole('checkbox', { name: 'R1 for Alice Chen' });
+      expect(aliceR1).toBeDisabled();
+    });
   });
 });

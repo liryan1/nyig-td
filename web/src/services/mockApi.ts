@@ -210,6 +210,56 @@ export async function registerPlayer(
   return structuredClone(tournament);
 }
 
+export async function bulkRegisterPlayers(
+  tournamentId: string,
+  playerList: Array<{ name: string; agaId: string; rank: string; club?: string; email?: string }>
+): Promise<{ tournament: Tournament; created: Player[]; alreadyRegistered: string[] }> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const created: Player[] = [];
+  const alreadyRegistered: string[] = [];
+
+  for (const p of playerList) {
+    let player = players.find((pl) => pl.agaId === p.agaId);
+    if (!player) {
+      player = {
+        id: `player-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name: p.name,
+        rank: p.rank,
+        club: p.club,
+        agaId: p.agaId,
+        email: p.email,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      players.push(player);
+      created.push(player);
+    }
+
+    const existing = tournament.registrations.find((r) => {
+      const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
+      return id === player!.id;
+    });
+
+    if (existing && !existing.withdrawn) {
+      alreadyRegistered.push(p.agaId);
+      continue;
+    }
+
+    tournament.registrations.push({
+      playerId: player,
+      roundsParticipating: [],
+      registeredAt: new Date().toISOString(),
+      withdrawn: false,
+    });
+  }
+
+  tournament.updatedAt = new Date().toISOString();
+  return { tournament: structuredClone(tournament), created, alreadyRegistered };
+}
+
 export async function withdrawPlayer(tournamentId: string, playerId: string): Promise<Tournament> {
   await delay(300);
   const tournament = tournaments.find((t) => t.id === tournamentId);

@@ -324,6 +324,45 @@ describe('RoundManager', () => {
     expect(onManualPair).toHaveBeenCalledWith(1, 'p1', 'p2');
   });
 
+  it('disables Generate Pairings and shows hint when previous round is not completed', async () => {
+    const user = userEvent.setup();
+    const tournament = makeTournament({
+      rounds: [
+        {
+          number: 1,
+          status: 'in_progress',
+          pairings: [
+            { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 6.5, result: 'black_wins' },
+          ],
+          byes: [],
+        },
+        { number: 2, status: 'pending', pairings: [], byes: [] },
+        { number: 3, status: 'pending', pairings: [], byes: [] },
+      ],
+    });
+
+    render(
+      <RoundManager
+        tournament={tournament}
+        onGeneratePairings={noop}
+        onRecordResult={noop}
+        onUnpairMatch={noop}
+        onManualPair={noop}
+        isPairing={false}
+      />
+    );
+
+    // Switch to Round 2
+    await user.click(screen.getByText('Round 2'));
+
+    // Generate Pairings button should be disabled
+    const generateBtn = screen.getByText('Generate Pairings');
+    expect(generateBtn).toBeDisabled();
+
+    // Hint message should be visible
+    expect(screen.getByText('Complete round 1 before pairing round 2')).toBeInTheDocument();
+  });
+
   it('shows "Pair Remaining" when some pairings exist', () => {
     const tournament = makeTournament({
       rounds: [
