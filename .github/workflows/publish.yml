@@ -38,15 +38,32 @@ jobs:
           VERSION=$(grep '^version =' pyproject.toml | cut -d '"' -f 2)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check if version already published
+        id: check_version
+        run: |
+          PACKAGE_NAME=$(grep '^name =' pyproject.toml | cut -d '"' -f 2)
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/${PACKAGE_NAME}/${VERSION}/json")
+          if [ "$STATUS" = "200" ]; then
+            echo "Version ${VERSION} already exists on PyPI, skipping publish."
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} not found on PyPI, proceeding with publish."
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build package
+        if: steps.check_version.outputs.EXISTS == 'false'
         run: uv build
 
       - name: Publish package
+        if: steps.check_version.outputs.EXISTS == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: lib/dist
 
       - name: Create GitHub Release
+        if: steps.check_version.outputs.EXISTS == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
