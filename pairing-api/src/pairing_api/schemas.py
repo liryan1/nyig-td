@@ -110,6 +110,14 @@ class PairingResponse(BaseModel):
     warnings: list[str]
 
 
+class TiebreakerEnum(str, Enum):
+    WINS = "wins"
+    SOS = "sos"
+    SDS = "sds"
+    SOSOS = "sosos"
+    HTH = "hth"
+
+
 # ============ Standings Schemas ============
 
 class StandingsRequest(BaseModel):
@@ -117,6 +125,9 @@ class StandingsRequest(BaseModel):
     players: list[PlayerInput]
     rounds: list[RoundInput]
     through_round: Optional[int] = Field(None, ge=1)
+    tiebreaker_order: list[TiebreakerEnum] = Field(
+        default=[TiebreakerEnum.WINS, TiebreakerEnum.SOS, TiebreakerEnum.SDS, TiebreakerEnum.HTH]
+    )
 
 
 class PlayerStandingOutput(BaseModel):

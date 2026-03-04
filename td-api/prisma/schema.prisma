@@ -12,14 +12,13 @@ model Player {
   name      String
   rank      String
   club      String?
-  agaId     String?
+  agaId     String   @unique
   rating    Int?
   email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
-  @@index([agaId])
 }
 
 model Tournament {
@@ -48,11 +47,12 @@ type Division {
 
 type TournamentSettings {
   numRounds            Int
-  pairingAlgorithm     String  @default("mcmahon")
-  handicapType         String  @default("rank_difference")
-  handicapModifier     String  @default("none")
+  pairingAlgorithm     String   @default("mcmahon")
+  handicapType         String   @default("rank_difference")
+  handicapModifier     String   @default("none")
   mcmahonBar           String?
-  crossDivisionPairing Boolean @default(true)
+  crossDivisionPairing Boolean  @default(true)
+  tiebreakerOrder      String[] @default(["wins", "sos", "sds", "hth"])
 }
 
 type PlayerRegistration {

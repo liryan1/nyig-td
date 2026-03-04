@@ -5,15 +5,15 @@ import { RoundManager } from '@/components/tournament/RoundManager';
 import type { Tournament, Player } from '@/types';
 
 const players: Player[] = [
-  { _id: 'p1', name: 'Alice Chen', rank: '5d', createdAt: '', updatedAt: '' },
-  { _id: 'p2', name: 'Bob Kim', rank: '3d', createdAt: '', updatedAt: '' },
-  { _id: 'p3', name: 'Carol Wang', rank: '1d', createdAt: '', updatedAt: '' },
-  { _id: 'p4', name: 'David Lee', rank: '2k', createdAt: '', updatedAt: '' },
+  { id: 'p1', name: 'Alice Chen', rank: '5d', agaId: '12345', createdAt: '', updatedAt: '' },
+  { id: 'p2', name: 'Bob Kim', rank: '3d', agaId: '12346', createdAt: '', updatedAt: '' },
+  { id: 'p3', name: 'Carol Wang', rank: '1d', agaId: '12347', createdAt: '', updatedAt: '' },
+  { id: 'p4', name: 'David Lee', rank: '2k', agaId: '12348', createdAt: '', updatedAt: '' },
 ];
 
 function makeTournament(overrides?: Partial<Tournament>): Tournament {
   return {
-    _id: 't1',
+    id: 't1',
     name: 'Test Tournament',
     date: '2024-01-01',
     status: 'in_progress',

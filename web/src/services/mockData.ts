@@ -3,7 +3,7 @@ import type { Player, Tournament, PlayerStanding } from '@/types';
 // Sample players
 export const mockPlayers: Player[] = [
   {
-    _id: 'p1',
+    id: 'p1',
     name: 'Alice Chen',
     rank: '5d',
     club: 'NYC Go Club',
@@ -14,7 +14,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-15T10:00:00Z',
   },
   {
-    _id: 'p2',
+    id: 'p2',
     name: 'Bob Kim',
     rank: '3d',
     club: 'Brooklyn Go',
@@ -25,7 +25,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-16T10:00:00Z',
   },
   {
-    _id: 'p3',
+    id: 'p3',
     name: 'Carol Wang',
     rank: '1d',
     club: 'NYC Go Club',
@@ -35,7 +35,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-17T10:00:00Z',
   },
   {
-    _id: 'p4',
+    id: 'p4',
     name: 'David Lee',
     rank: '2k',
     club: 'Queens Go',
@@ -45,7 +45,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-18T10:00:00Z',
   },
   {
-    _id: 'p5',
+    id: 'p5',
     name: 'Eva Martinez',
     rank: '5k',
     club: 'Brooklyn Go',
@@ -55,16 +55,17 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-19T10:00:00Z',
   },
   {
-    _id: 'p6',
+    id: 'p6',
     name: 'Frank Zhang',
     rank: '8k',
     club: 'NYC Go Club',
+    agaId: '12357',
     rating: 900,
     createdAt: '2024-01-20T10:00:00Z',
     updatedAt: '2024-01-20T10:00:00Z',
   },
   {
-    _id: 'p7',
+    id: 'p7',
     name: 'Grace Park',
     rank: '4d',
     club: 'Manhattan Go',
@@ -74,7 +75,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-21T10:00:00Z',
   },
   {
-    _id: 'p8',
+    id: 'p8',
     name: 'Henry Liu',
     rank: '2d',
     club: 'Queens Go',
@@ -84,7 +85,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-22T10:00:00Z',
   },
   {
-    _id: 'p9',
+    id: 'p9',
     name: 'Isabelle Tanaka',
     rank: '6d',
     club: 'Manhattan Go',
@@ -95,7 +96,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-23T10:00:00Z',
   },
   {
-    _id: 'p10',
+    id: 'p10',
     name: 'James Wu',
     rank: '1k',
     club: 'NYC Go Club',
@@ -105,7 +106,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-24T10:00:00Z',
   },
   {
-    _id: 'p11',
+    id: 'p11',
     name: 'Kevin Patel',
     rank: '3k',
     club: 'Queens Go',
@@ -115,7 +116,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-25T10:00:00Z',
   },
   {
-    _id: 'p12',
+    id: 'p12',
     name: 'Laura Hoffman',
     rank: '7k',
     club: 'Brooklyn Go',
@@ -126,7 +127,7 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-26T10:00:00Z',
   },
   {
-    _id: 'p13',
+    id: 'p13',
     name: "Michael O'Brien",
     rank: '10k',
     club: 'NYC Go Club',
@@ -136,19 +137,21 @@ export const mockPlayers: Player[] = [
     updatedAt: '2024-01-27T10:00:00Z',
   },
   {
-    _id: 'p14',
+    id: 'p14',
     name: 'Nina Sokolov',
     rank: '12k',
     club: 'Manhattan Go',
+    agaId: '12358',
     rating: 500,
     createdAt: '2024-01-28T10:00:00Z',
     updatedAt: '2024-01-28T10:00:00Z',
   },
   {
-    _id: 'p15',
+    id: 'p15',
     name: 'Oscar Rivera',
     rank: '15k',
     club: 'Brooklyn Go',
+    agaId: '12359',
     rating: 300,
     createdAt: '2024-01-29T10:00:00Z',
     updatedAt: '2024-01-29T10:00:00Z',
@@ -158,7 +161,7 @@ export const mockPlayers: Player[] = [
 // Sample tournaments
 export const mockTournaments: Tournament[] = [
   {
-    _id: 't1',
+    id: 't1',
     name: 'NYIG Winter Championship 2024',
     description: 'Annual winter tournament for all skill levels',
     date: '2024-02-15',
@@ -171,6 +174,7 @@ export const mockTournaments: Tournament[] = [
       handicapModifier: 'minus_1',
       mcmahonBar: '3d',
       crossDivisionPairing: true,
+      tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
     },
     divisions: [
       { id: 'div-dan', name: 'Dan Section', description: '1d and above' },
@@ -231,18 +235,19 @@ export const mockTournaments: Tournament[] = [
     updatedAt: '2024-02-15T13:00:00Z',
   },
   {
-    _id: 't2',
+    id: 't2',
     name: 'Brooklyn Open 2024',
     description: 'Open tournament at Brooklyn Go Club',
     date: '2024-03-10',
     location: 'Brooklyn Go Club',
-    status: 'upcoming',
+    status: 'setup',
     settings: {
       numRounds: 3,
       pairingAlgorithm: 'swiss',
       handicapType: 'none',
       handicapModifier: 'none',
       crossDivisionPairing: true,
+      tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
     },
     divisions: [
       { id: 'div-open', name: 'Open', description: 'All ranks welcome' },
@@ -265,7 +270,7 @@ export const mockTournaments: Tournament[] = [
     updatedAt: '2024-02-23T14:00:00Z',
   },
   {
-    _id: 't3',
+    id: 't3',
     name: 'Fall Classic 2023',
     date: '2023-10-20',
     location: 'Manhattan Go Center',
@@ -277,6 +282,7 @@ export const mockTournaments: Tournament[] = [
       handicapModifier: 'none',
       mcmahonBar: '4d',
       crossDivisionPairing: true,
+      tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
     },
     divisions: [],
     registrations: [],

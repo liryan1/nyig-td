@@ -6,13 +6,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { PlayerStanding } from '@/types';
+import type { PlayerStanding, TiebreakerCriteria } from '@/types';
 
 interface StandingsTableProps {
   standings: PlayerStanding[];
+  tiebreakerOrder?: TiebreakerCriteria[];
 }
 
-export function StandingsTable({ standings }: StandingsTableProps) {
+const STAT_COLUMNS: Record<string, { label: string; key: keyof PlayerStanding }> = {
+  sos: { label: 'SOS', key: 'sos' },
+  sds: { label: 'SDS', key: 'sds' },
+  sosos: { label: 'SOSOS', key: 'sosos' },
+};
+
+export function StandingsTable({ standings, tiebreakerOrder }: StandingsTableProps) {
+  // Determine which stat columns to show based on tiebreakerOrder
+  // HTH is pairwise and doesn't get a column
+  const statColumnsToShow = tiebreakerOrder
+    ? tiebreakerOrder.filter((c): c is 'sos' | 'sds' | 'sosos' => c in STAT_COLUMNS)
+    : (['sos', 'sds', 'sosos'] as const);
+
   return (
     <Table>
       <TableHeader>
@@ -21,9 +34,11 @@ export function StandingsTable({ standings }: StandingsTableProps) {
           <TableHead>Player</TableHead>
           <TableHead>Grade</TableHead>
           <TableHead className="text-right">W-L</TableHead>
-          <TableHead className="text-right">SOS</TableHead>
-          <TableHead className="text-right">SDS</TableHead>
-          <TableHead className="text-right">SOSOS</TableHead>
+          {statColumnsToShow.map((col) => (
+            <TableHead key={col} className="text-right">
+              {STAT_COLUMNS[col].label}
+            </TableHead>
+          ))}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -35,9 +50,11 @@ export function StandingsTable({ standings }: StandingsTableProps) {
             <TableCell className="text-right">
               {standing.wins}-{standing.losses}
             </TableCell>
-            <TableCell className="text-right text-muted-foreground">{standing.sos.toFixed(2)}</TableCell>
-            <TableCell className="text-right text-muted-foreground">{standing.sds.toFixed(2)}</TableCell>
-            <TableCell className="text-right text-muted-foreground">{standing.sosos.toFixed(2)}</TableCell>
+            {statColumnsToShow.map((col) => (
+              <TableCell key={col} className="text-right text-muted-foreground">
+                {(standing[STAT_COLUMNS[col].key] as number).toFixed(2)}
+              </TableCell>
+            ))}
           </TableRow>
         ))}
       </TableBody>

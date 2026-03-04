@@ -1,5 +1,5 @@
 [project]
-name = "nyig-td-api"
+name = "pairing-api"
 version = "0.1.0"
 description = "Stateless API for Go tournament management"
 requires-python = ">=3.14"
@@ -27,10 +27,10 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-v --cov=nyig_td_api --cov-report=term-missing"
+addopts = "-v --cov=pairing_api --cov-report=term-missing"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nyig_td_api"]
+packages = ["src/pairing_api"]
 
 [dependency-groups]
 dev = [

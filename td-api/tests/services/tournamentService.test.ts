@@ -52,6 +52,7 @@ function createTournamentData(overrides = {}) {
       handicapModifier: 'none',
       mcmahonBar: null,
       crossDivisionPairing: true,
+      tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
     },
     divisions: [],
     registrations: [],
@@ -74,7 +75,7 @@ function createPlayerData(id: string, name: string, rank: string) {
     name,
     rank,
     club: null,
-    agaId: null,
+    agaId: 'AGA-' + id,
     rating: null,
     email: null,
     createdAt: new Date(),
@@ -106,6 +107,7 @@ describe('TournamentService', () => {
           handicapType: 'rank_difference',
           handicapModifier: 'none',
           crossDivisionPairing: true,
+          tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
         },
       });
 
@@ -135,6 +137,7 @@ describe('TournamentService', () => {
           handicapModifier: 'minus_1',
           mcmahonBar: '1d',
           crossDivisionPairing: true,
+          tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
         },
       });
 
@@ -1623,6 +1626,7 @@ describe('TournamentService', () => {
           handicapModifier: 'none',
           mcmahonBar: null,
           crossDivisionPairing: false,
+          tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'],
         },
         divisions: [
           { id: 'div-open', name: 'Open' },

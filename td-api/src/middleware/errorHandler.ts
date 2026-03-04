@@ -33,7 +33,7 @@ export function errorHandler(
     return;
   }
 
-  // Axios errors (from nyig-td-api)
+  // Axios errors (from pairing-api)
   if (err instanceof AxiosError) {
     const status = err.response?.status || 500;
     response.error = 'External service error';
@@ -49,6 +49,10 @@ export function errorHandler(
         response.error = 'Duplicate entry';
         response.details = err.meta?.target;
         res.status(409).json(response);
+        return;
+      case 'P2023':
+        response.error = 'Invalid ID format';
+        res.status(400).json(response);
         return;
       case 'P2025':
         response.error = 'Record not found';
@@ -69,7 +73,7 @@ export function errorHandler(
     return;
   }
 
-  // Invalid ObjectId format
+  // Invalid ObjectId format (non-Prisma sources)
   if (err.message.includes('Invalid ObjectId') || err.message.includes('Malformed ObjectId')) {
     response.error = 'Invalid ID format';
     res.status(400).json(response);

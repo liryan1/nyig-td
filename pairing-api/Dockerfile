@@ -14,4 +14,4 @@ RUN uv pip install --system .
 
 # Run server
 EXPOSE 8080
-CMD ["uvicorn", "nyig_td_api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "pairing_api.main:app", "--host", "0.0.0.0", "--port", "8080"]

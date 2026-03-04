@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync
 
 # Run development server
-uv run uvicorn nyig_td_api.main:app --reload --port 8000
+uv run uvicorn pairing_api.main:app --reload --port 8000
 
 # Run tests (includes coverage report)
 uv run pytest

@@ -5,12 +5,13 @@ from fastapi import APIRouter, HTTPException
 from nyig_td import (
     Tournament, TournamentSettings, Player, Round, Pairing, Bye,
     GameResult, RoundStatus,
-    StandingsCalculator, Rank
+    StandingsCalculator, Rank,
+    TiebreakerCriteria, TiebreakerOrder,
 )
 
 from ..schemas import (
     StandingsRequest, StandingsResponse, PlayerStandingOutput,
-    GameResultEnum
+    GameResultEnum, TiebreakerEnum,
 )
 
 router = APIRouter()
@@ -83,12 +84,25 @@ async def calculate_standings(request: StandingsRequest) -> StandingsResponse:
 
             round_.status = RoundStatus.COMPLETED
 
+        # Convert tiebreaker order
+        tiebreaker_mapping = {
+            TiebreakerEnum.WINS: TiebreakerCriteria.WINS,
+            TiebreakerEnum.SOS: TiebreakerCriteria.SOS,
+            TiebreakerEnum.SDS: TiebreakerCriteria.SDS,
+            TiebreakerEnum.SOSOS: TiebreakerCriteria.SOSOS,
+            TiebreakerEnum.HTH: TiebreakerCriteria.HTH,
+        }
+        tiebreaker_order = TiebreakerOrder.from_list([
+            tiebreaker_mapping[t] for t in request.tiebreaker_order
+        ])
+
         # Calculate standings
         calculator = StandingsCalculator()
 
         standings = calculator.calculate(
             tournament,
-            through_round=request.through_round
+            through_round=request.through_round,
+            tiebreaker_order=tiebreaker_order,
         )
 
         # Convert to response

@@ -10,6 +10,8 @@ export type HandicapType = 'none' | 'rank_difference';
 
 export type HandicapModifier = 'none' | 'minus_1' | 'minus_2';
 
+export type TiebreakerCriteria = 'wins' | 'sos' | 'sds' | 'sosos' | 'hth';
+
 export interface TournamentSettings {
   numRounds: number;
   pairingAlgorithm: PairingAlgorithm;
@@ -17,6 +19,7 @@ export interface TournamentSettings {
   handicapModifier: HandicapModifier;
   mcmahonBar?: string;
   crossDivisionPairing: boolean;
+  tiebreakerOrder: TiebreakerCriteria[];
 }
 
 export interface Division {
@@ -61,7 +64,7 @@ export interface Player {
   name: string;
   rank: string;
   club?: string;
-  agaId?: string;
+  agaId: string;
   rating?: number;
   email?: string;
   createdAt: Date;

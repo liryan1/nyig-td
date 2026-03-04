@@ -3,7 +3,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from nyig_td_api.main import app
+from pairing_api.main import app
 
 
 @pytest.fixture
@@ -807,6 +807,73 @@ async def test_standings_response_includes_all_fields(client: AsyncClient) -> No
     alice = next(s for s in data["standings"] if s["player_id"] == "1")
     assert alice["player_name"] == "Alice Chen"
     assert alice["player_rank"] == "3d"
+
+
+@pytest.mark.anyio
+async def test_custom_tiebreaker_order(client: AsyncClient) -> None:
+    """Test standings with custom tiebreaker order via API."""
+    response = await client.post("/standings", json={
+        "players": [
+            {"id": "1", "name": "Alice", "rank": "3d"},
+            {"id": "2", "name": "Bob", "rank": "3d"},
+            {"id": "3", "name": "Carol", "rank": "3d"},
+            {"id": "4", "name": "Dave", "rank": "3d"},
+        ],
+        "rounds": [
+            {
+                "number": 1,
+                "pairings": [
+                    {"black_player_id": "2", "white_player_id": "1", "result": "W+"},  # Alice beats Bob
+                    {"black_player_id": "4", "white_player_id": "3", "result": "W+"},  # Carol beats Dave
+                ],
+            },
+        ],
+        "tiebreaker_order": ["wins", "sds", "sos"],
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["standings"]) == 4
+
+
+@pytest.mark.anyio
+async def test_hth_tiebreaker_via_api(client: AsyncClient) -> None:
+    """Test HTH tiebreaker via API: A beat B, same wins, HTH breaks tie."""
+    response = await client.post("/standings", json={
+        "players": [
+            {"id": "1", "name": "Alice", "rank": "3d"},
+            {"id": "2", "name": "Bob", "rank": "3d"},
+            {"id": "3", "name": "Carol", "rank": "3d"},
+            {"id": "4", "name": "Dave", "rank": "3d"},
+        ],
+        "rounds": [
+            {
+                "number": 1,
+                "pairings": [
+                    {"black_player_id": "2", "white_player_id": "1", "result": "W+"},  # Alice beats Bob
+                    {"black_player_id": "4", "white_player_id": "3", "result": "W+"},  # Carol beats Dave
+                ],
+            },
+            {
+                "number": 2,
+                "pairings": [
+                    {"black_player_id": "1", "white_player_id": "3", "result": "W+"},  # Carol beats Alice
+                    {"black_player_id": "2", "white_player_id": "4", "result": "B+"},  # Bob beats Dave
+                ],
+            },
+        ],
+        "tiebreaker_order": ["wins", "hth", "sos"],
+    })
+    assert response.status_code == 200
+    data = response.json()
+
+    # Carol: 2 wins, first place
+    carol = next(s for s in data["standings"] if s["player_id"] == "3")
+    assert carol["rank"] == 1
+
+    # Alice and Bob both 1 win; Alice beat Bob → Alice above Bob via HTH
+    alice = next(s for s in data["standings"] if s["player_id"] == "1")
+    bob = next(s for s in data["standings"] if s["player_id"] == "2")
+    assert alice["rank"] < bob["rank"]
 
 
 @pytest.mark.anyio

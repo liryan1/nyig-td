@@ -34,7 +34,7 @@ cd pairing-api
 uv sync                                                     # install
 uv run pytest                                                # test
 uv run pytest tests/test_pairing_api.py::test_name -v        # single test
-uv run uvicorn nyig_td_api.main:app --reload --port 8000     # dev server (docs at /docs)
+uv run uvicorn pairing_api.main:app --reload --port 8000      # dev server (docs at /docs)
 uv run mypy src/                                             # type check
 uv run ruff check src/                                       # lint
 ```

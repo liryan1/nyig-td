@@ -17,8 +17,8 @@ const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   rank: z.string().regex(/^\d+[kdKD]$/, 'Invalid rank format (e.g., 5k, 3d)'),
   club: z.string().max(100).optional(),
-  agaId: z.string().max(20).optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  agaId: z.string().min(1, 'AGA ID is required').max(20),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -34,17 +34,22 @@ export function PlayerForm({ onSubmit, onCancel, isLoading, defaultValues }: Pla
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '',
-      rank: '',
-      club: '',
-      agaId: '',
-      email: '',
-      ...defaultValues,
+      name: defaultValues?.name ?? '',
+      rank: defaultValues?.rank ?? '',
+      club: defaultValues?.club ?? '',
+      agaId: defaultValues?.agaId ?? '',
+      email: defaultValues?.email ?? '',
     },
   });
 
   const handleSubmit = (data: FormData) => {
-    onSubmit(data as CreatePlayerForm);
+    onSubmit({
+      name: data.name,
+      rank: data.rank,
+      club: data.club || undefined,
+      agaId: data.agaId,
+      email: data.email || undefined,
+    });
   };
 
   return (
@@ -96,10 +101,11 @@ export function PlayerForm({ onSubmit, onCancel, isLoading, defaultValues }: Pla
           name="agaId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>AGA ID</FormLabel>
+              <FormLabel>AGA ID *</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />

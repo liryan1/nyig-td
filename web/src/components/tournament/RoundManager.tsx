@@ -47,7 +47,7 @@ export function RoundManager({
   const playerMap = new Map<string, Player>();
   for (const reg of tournament.registrations) {
     if (typeof reg.playerId !== 'string') {
-      playerMap.set(reg.playerId._id, reg.playerId);
+      playerMap.set(reg.playerId.id, reg.playerId);
     }
   }
 
@@ -70,7 +70,7 @@ export function RoundManager({
     return tournament.registrations
       .filter((r) => !r.withdrawn)
       .map((r) => (typeof r.playerId === 'string' ? null : r.playerId))
-      .filter((p): p is Player => p !== null && !pairedIds.has(p._id));
+      .filter((p): p is Player => p !== null && !pairedIds.has(p.id));
   };
 
   const unpairedPlayers = getUnpairedPlayers();
@@ -184,12 +184,12 @@ export function RoundManager({
                 <div className="grid gap-1 mb-4">
                   {unpairedPlayers.map((player) => (
                     <label
-                      key={player._id}
+                      key={player.id}
                       className="flex items-center gap-3 px-3 py-2 rounded hover:bg-accent cursor-pointer"
                     >
                       <Checkbox
-                        checked={selectedPlayers.has(player._id)}
-                        onCheckedChange={() => togglePlayer(player._id)}
+                        checked={selectedPlayers.has(player.id)}
+                        onCheckedChange={() => togglePlayer(player.id)}
                       />
                       <span>{player.name}</span>
                       <span className="text-muted-foreground text-sm">{player.rank}</span>

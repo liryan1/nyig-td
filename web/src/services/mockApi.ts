@@ -46,7 +46,7 @@ export async function listPlayers(params?: { search?: string; limit?: number }):
 
 export async function getPlayer(id: string): Promise<Player> {
   await delay();
-  const player = players.find((p) => p._id === id);
+  const player = players.find((p) => p.id === id);
   if (!player) throw new Error('Player not found');
   return player;
 }
@@ -54,7 +54,7 @@ export async function getPlayer(id: string): Promise<Player> {
 export async function createPlayer(data: CreatePlayerForm): Promise<Player> {
   await delay(300);
   const newPlayer: Player = {
-    _id: `p${generateId()}`,
+    id: `p${generateId()}`,
     ...data,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -65,7 +65,7 @@ export async function createPlayer(data: CreatePlayerForm): Promise<Player> {
 
 export async function updatePlayer(id: string, data: Partial<CreatePlayerForm>): Promise<Player> {
   await delay(300);
-  const index = players.findIndex((p) => p._id === id);
+  const index = players.findIndex((p) => p.id === id);
   if (index === -1) throw new Error('Player not found');
 
   players[index] = {
@@ -78,7 +78,7 @@ export async function updatePlayer(id: string, data: Partial<CreatePlayerForm>):
 
 export async function deletePlayer(id: string): Promise<void> {
   await delay(300);
-  const index = players.findIndex((p) => p._id === id);
+  const index = players.findIndex((p) => p.id === id);
   if (index === -1) throw new Error('Player not found');
   players.splice(index, 1);
 }
@@ -98,7 +98,7 @@ export async function listTournaments(params?: { status?: string }): Promise<Tou
 
 export async function getTournament(id: string): Promise<Tournament> {
   await delay();
-  const tournament = tournaments.find((t) => t._id === id);
+  const tournament = tournaments.find((t) => t.id === id);
   if (!tournament) throw new Error('Tournament not found');
   return structuredClone(tournament);
 }
@@ -106,12 +106,12 @@ export async function getTournament(id: string): Promise<Tournament> {
 export async function createTournament(data: CreateTournamentForm): Promise<Tournament> {
   await delay(300);
   const newTournament: Tournament = {
-    _id: `t${generateId()}`,
+    id: `t${generateId()}`,
     name: data.name,
     description: data.description,
     date: data.date,
     location: data.location,
-    status: 'upcoming',
+    status: 'setup',
     settings: {
       numRounds: data.settings.numRounds,
       pairingAlgorithm: data.settings.pairingAlgorithm,
@@ -119,6 +119,7 @@ export async function createTournament(data: CreateTournamentForm): Promise<Tour
       handicapModifier: data.settings.handicapModifier,
       mcmahonBar: data.settings.mcmahonBar,
       crossDivisionPairing: data.settings.crossDivisionPairing ?? true,
+      tiebreakerOrder: data.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth'],
     },
     divisions: [],
     registrations: [],
@@ -132,7 +133,7 @@ export async function createTournament(data: CreateTournamentForm): Promise<Tour
     updatedAt: new Date().toISOString(),
   };
   tournaments.push(newTournament);
-  standings[newTournament._id] = [];
+  standings[newTournament.id] = [];
   return newTournament;
 }
 
@@ -141,7 +142,7 @@ export async function updateTournament(
   data: Partial<CreateTournamentForm & { status?: string }>
 ): Promise<Tournament> {
   await delay(300);
-  const index = tournaments.findIndex((t) => t._id === id);
+  const index = tournaments.findIndex((t) => t.id === id);
   if (index === -1) throw new Error('Tournament not found');
 
   const tournament = tournaments[index];
@@ -160,7 +161,7 @@ export async function updateTournament(
 
 export async function deleteTournament(id: string): Promise<void> {
   await delay(300);
-  const index = tournaments.findIndex((t) => t._id === id);
+  const index = tournaments.findIndex((t) => t.id === id);
   if (index === -1) throw new Error('Tournament not found');
   tournaments.splice(index, 1);
   delete standings[id];
@@ -175,15 +176,15 @@ export async function registerPlayer(
   divisionId?: string
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
-  const player = players.find((p) => p._id === playerId);
+  const player = players.find((p) => p.id === playerId);
   if (!player) throw new Error('Player not found');
 
   // Check if already registered
   const existing = tournament.registrations.find((r) => {
-    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId._id;
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
     return id === playerId;
   });
 
@@ -211,11 +212,11 @@ export async function registerPlayer(
 
 export async function withdrawPlayer(tournamentId: string, playerId: string): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const registration = tournament.registrations.find((r) => {
-    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId._id;
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
     return id === playerId;
   });
 
@@ -232,11 +233,11 @@ export async function updatePlayerRounds(
   roundsParticipating: number[]
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const registration = tournament.registrations.find((r) => {
-    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId._id;
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
     return id === playerId;
   });
 
@@ -253,11 +254,11 @@ export async function updateRegistration(
   data: { roundsParticipating?: number[]; divisionId?: string | null }
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const registration = tournament.registrations.find((r) => {
-    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId._id;
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
     return id === playerId;
   });
 
@@ -280,7 +281,7 @@ export async function addDivision(
   data: { name: string; description?: string }
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const division: Division = {
@@ -299,7 +300,7 @@ export async function updateDivision(
   data: { name?: string; description?: string }
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const division = tournament.divisions.find((d) => d.id === divisionId);
@@ -316,7 +317,7 @@ export async function removeDivision(
   divisionId: string
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const index = tournament.divisions.findIndex((d) => d.id === divisionId);
@@ -342,7 +343,7 @@ export async function unpairMatch(
   boardNumber: number
 ): Promise<Round> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const round = tournament.rounds.find((r) => r.number === roundNumber);
@@ -376,7 +377,7 @@ export async function manualPair(
   player2Id: string
 ): Promise<Round> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const round = tournament.rounds.find((r) => r.number === roundNumber);
@@ -421,7 +422,7 @@ export async function manualPair(
 
 export async function generatePairings(tournamentId: string, roundNumber: number): Promise<Round> {
   await delay(500);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const round = tournament.rounds.find((r) => r.number === roundNumber);
@@ -444,7 +445,7 @@ export async function generatePairings(tournamentId: string, roundNumber: number
   // Get active players, excluding already-paired
   const activePlayers = tournament.registrations
     .filter((r) => !r.withdrawn)
-    .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id))
+    .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id))
     .filter((id) => !alreadyPairedIds.has(id));
 
   if (activePlayers.length === 0) {
@@ -491,7 +492,7 @@ export async function recordResult(
   result: GameResult
 ): Promise<Tournament> {
   await delay(300);
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) throw new Error('Tournament not found');
 
   const round = tournament.rounds.find((r) => r.number === roundNumber);
@@ -523,7 +524,7 @@ function updateStandings(tournament: Tournament) {
   // Initialize stats for all registered players
   for (const reg of tournament.registrations) {
     if (reg.withdrawn) continue;
-    const playerId = typeof reg.playerId === 'string' ? reg.playerId : reg.playerId._id;
+    const playerId = typeof reg.playerId === 'string' ? reg.playerId : reg.playerId.id;
     playerStats[playerId] = { wins: 0, losses: 0, opponents: [] };
   }
 
@@ -565,7 +566,7 @@ function updateStandings(tournament: Tournament) {
   // Build standings
   const standingsList: PlayerStanding[] = [];
   for (const [playerId, stats] of Object.entries(playerStats)) {
-    const player = players.find((p) => p._id === playerId);
+    const player = players.find((p) => p.id === playerId);
     const sosValue = sos[playerId] ?? 0;
     standingsList.push({
       rank: 0,
@@ -580,11 +581,24 @@ function updateStandings(tournament: Tournament) {
     });
   }
 
-  // Sort by wins, then SOS
-  standingsList.sort((a, b) => b.wins - a.wins || b.sos - a.sos);
+  // Sort using tournament's tiebreaker order
+  const order = tournament.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth'];
+  const statKeys: Record<string, keyof PlayerStanding> = {
+    wins: 'wins', sos: 'sos', sds: 'sds', sosos: 'sosos',
+  };
+  standingsList.sort((a, b) => {
+    for (const criterion of order) {
+      if (criterion === 'hth') continue; // Skip HTH in mock (pairwise comparison)
+      const key = statKeys[criterion];
+      if (key && (a[key] as number) !== (b[key] as number)) {
+        return (b[key] as number) - (a[key] as number);
+      }
+    }
+    return 0;
+  });
   standingsList.forEach((s, i) => (s.rank = i + 1));
 
-  standings[tournament._id] = standingsList;
+  standings[tournament.id] = standingsList;
 }
 
 // ========== Standings ==========
@@ -601,14 +615,14 @@ export async function getDivisionStandings(
   divisionId: string,
 ): Promise<PlayerStanding[]> {
   await delay();
-  const tournament = tournaments.find((t) => t._id === tournamentId);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
   if (!tournament) return [];
 
   // Get player IDs in this division
   const divisionPlayerIds = new Set(
     tournament.registrations
       .filter((r) => !r.withdrawn && r.divisionId === divisionId)
-      .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id))
+      .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id))
   );
 
   const allStandings = standings[tournamentId] ?? [];

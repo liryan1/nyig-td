@@ -45,7 +45,8 @@ import { Spinner } from '@/components/Spinner';
 import { RegistrationTable } from '@/components/tournament/RegistrationTable';
 import { RoundManager } from '@/components/tournament/RoundManager';
 import { StandingsTable } from '@/components/tournament/StandingsTable';
-import type { Tournament, Player, Division, GameResult } from '@/types';
+import { TiebreakerOrderEditor } from '@/components/tournament/TiebreakerOrderEditor';
+import type { Tournament, Player, Division, GameResult, TiebreakerCriteria } from '@/types';
 
 export function TournamentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,15 +54,17 @@ export function TournamentDetailPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
 
-  const { data: tournament, isLoading } = useQuery({
+  const { data: tournament, isLoading, isError } = useQuery({
     queryKey: ['tournament', id],
     queryFn: () => getTournament(id!),
     enabled: !!id,
+    retry: false,
   });
 
   const { data: allPlayers } = useQuery({
     queryKey: ['players'],
     queryFn: () => listPlayers({ limit: 500 }),
+    enabled: !!tournament,
   });
 
   const { data: standings } = useQuery({
@@ -70,7 +73,7 @@ export function TournamentDetailPage() {
       standingsDivision
         ? getDivisionStandings(id!, standingsDivision)
         : getStandings(id!),
-    enabled: !!id,
+    enabled: !!tournament,
   });
 
   const updateMutation = useMutation({
@@ -83,7 +86,6 @@ export function TournamentDetailPage() {
       registerPlayer(id!, playerId, roundsParticipating, divisionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournament', id] });
-      setShowRegister(false);
     },
   });
 
@@ -134,17 +136,31 @@ export function TournamentDetailPage() {
     },
   });
 
-  if (isLoading || !tournament) {
+  if (isLoading) {
     return <Spinner />;
+  }
+
+  if (isError || !tournament) {
+    return (
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-bold mb-2">Tournament Not Found</h1>
+        <p className="text-muted-foreground mb-4">
+          The tournament you're looking for doesn't exist or the ID is invalid.
+        </p>
+        <Link to="/">
+          <Button variant="outline">&larr; Back to Tournaments</Button>
+        </Link>
+      </div>
+    );
   }
 
   const registeredPlayerIds = new Set(
     tournament.registrations.filter(r => !r.withdrawn).map(r =>
-      typeof r.playerId === 'string' ? r.playerId : r.playerId._id
+      typeof r.playerId === 'string' ? r.playerId : r.playerId.id
     )
   );
 
-  const availablePlayers = allPlayers?.filter(p => !registeredPlayerIds.has(p._id)) || [];
+  const availablePlayers = allPlayers?.filter(p => !registeredPlayerIds.has(p.id)) || [];
 
   return (
     <div>
@@ -238,7 +254,7 @@ export function TournamentDetailPage() {
             </CardHeader>
             <CardContent>
               {standings && standings.length > 0 ? (
-                <StandingsTable standings={standings} />
+                <StandingsTable standings={standings} tiebreakerOrder={tournament.settings.tiebreakerOrder} />
               ) : (
                 <p className="text-muted-foreground">No standings yet. Complete at least one round.</p>
               )}
@@ -297,7 +313,8 @@ export function TournamentDetailPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-    upcoming: 'secondary',
+    setup: 'secondary',
+    registration: 'secondary',
     in_progress: 'default',
     completed: 'outline',
   };
@@ -360,12 +377,12 @@ function PlayerSelector({
       {divisions.length > 0 && (
         <div className="mb-4">
           <label className="text-sm font-medium">Division</label>
-          <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+          <Select value={selectedDivision || 'none'} onValueChange={(v) => setSelectedDivision(v === 'none' ? '' : v)}>
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="No division" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No division</SelectItem>
+              <SelectItem value="none">No division</SelectItem>
               {divisions.map((div) => (
                 <SelectItem key={div.id} value={div.id}>
                   {div.name}
@@ -401,8 +418,8 @@ function PlayerSelector({
       <div className="max-h-64 overflow-y-auto">
         {filtered.map((player) => (
           <button
-            key={player._id}
-            onClick={() => handleSelect(player._id)}
+            key={player.id}
+            onClick={() => handleSelect(player.id)}
             disabled={isLoading}
             className="w-full text-left px-3 py-2 hover:bg-accent rounded flex justify-between items-center"
           >
@@ -418,6 +435,14 @@ function PlayerSelector({
   );
 }
 
+const TIEBREAKER_LABELS: Record<TiebreakerCriteria, string> = {
+  wins: 'Wins',
+  sos: 'SOS',
+  sds: 'SDS',
+  sosos: 'SOSOS',
+  hth: 'HTH',
+};
+
 function TournamentSettings({
   tournament,
   onUpdate,
@@ -425,7 +450,22 @@ function TournamentSettings({
   tournament: Tournament;
   onUpdate: (data: Partial<Tournament>) => void;
 }) {
-  const statusOptions = ['upcoming', 'in_progress', 'completed'];
+  const [editingTiebreakers, setEditingTiebreakers] = useState(false);
+  const [tiebreakerDraft, setTiebreakerDraft] = useState<TiebreakerCriteria[]>(
+    tournament.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth']
+  );
+
+  const statusOptions = ['setup', 'registration', 'in_progress', 'completed'];
+
+  const saveTiebreakers = () => {
+    onUpdate({ settings: { ...tournament.settings, tiebreakerOrder: tiebreakerDraft } } as Partial<Tournament>);
+    setEditingTiebreakers(false);
+  };
+
+  const cancelTiebreakers = () => {
+    setTiebreakerDraft(tournament.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth']);
+    setEditingTiebreakers(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -480,6 +520,32 @@ function TournamentSettings({
             <label className="text-sm font-medium">McMahon Bar</label>
             <p className="text-muted-foreground">{tournament.settings.mcmahonBar}</p>
           </div>
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium">Tiebreaker Order</label>
+          {!editingTiebreakers && (
+            <Button variant="outline" size="sm" onClick={() => setEditingTiebreakers(true)}>
+              Edit
+            </Button>
+          )}
+        </div>
+        {editingTiebreakers ? (
+          <div className="space-y-2">
+            <TiebreakerOrderEditor value={tiebreakerDraft} onChange={setTiebreakerDraft} />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveTiebreakers}>Save</Button>
+              <Button variant="outline" size="sm" onClick={cancelTiebreakers}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">
+            {(tournament.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth'])
+              .map((c) => TIEBREAKER_LABELS[c])
+              .join(' → ')}
+          </p>
         )}
       </div>
     </div>

@@ -3,7 +3,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from nyig_td_api.main import app
+from pairing_api.main import app
 
 
 @pytest.fixture

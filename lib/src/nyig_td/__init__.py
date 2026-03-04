@@ -23,7 +23,7 @@ from .pairing import (
     PairingResult,
     get_pairing_engine,
 )
-from .standings import StandingsCalculator, PlayerStanding
+from .standings import StandingsCalculator, PlayerStanding, TiebreakerCriteria, TiebreakerOrder
 
 __version__ = "0.1.0"
 
@@ -58,4 +58,6 @@ __all__ = [
     # Standings
     "StandingsCalculator",
     "PlayerStanding",
+    "TiebreakerCriteria",
+    "TiebreakerOrder",
 ]

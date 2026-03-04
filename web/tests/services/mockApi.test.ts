@@ -74,10 +74,10 @@ describe('getPlayer', () => {
 
 describe('createPlayer', () => {
   it('creates and returns a new player', async () => {
-    const player = await createPlayer({ name: 'Test Player', rank: '1k' });
+    const player = await createPlayer({ name: 'Test Player', rank: '1k', agaId: '99999' });
     expect(player.name).toBe('Test Player');
     expect(player.rank).toBe('1k');
-    expect(player._id).toBeTruthy();
+    expect(player.id).toBeTruthy();
 
     const all = await listPlayers();
     expect(all.length).toBe(16);
@@ -101,7 +101,7 @@ describe('deletePlayer', () => {
     await deletePlayer('p1');
     const all = await listPlayers();
     expect(all.length).toBe(14);
-    expect(all.find((p) => p._id === 'p1')).toBeUndefined();
+    expect(all.find((p) => p.id === 'p1')).toBeUndefined();
   });
 
   it('throws for unknown id', async () => {
@@ -118,9 +118,9 @@ describe('listTournaments', () => {
   });
 
   it('filters by status', async () => {
-    const upcoming = await listTournaments({ status: 'upcoming' });
-    expect(upcoming.length).toBe(1);
-    expect(upcoming[0].name).toBe('Brooklyn Open 2024');
+    const setup = await listTournaments({ status: 'setup' });
+    expect(setup.length).toBe(1);
+    expect(setup[0].name).toBe('Brooklyn Open 2024');
   });
 });
 
@@ -158,7 +158,7 @@ describe('createTournament', () => {
     });
 
     expect(t.name).toBe('New Tourney');
-    expect(t.status).toBe('upcoming');
+    expect(t.status).toBe('setup');
     expect(t.rounds.length).toBe(3);
     expect(t.rounds[0].status).toBe('pending');
     expect(t.divisions).toEqual([]);
@@ -208,7 +208,7 @@ describe('registerPlayer', () => {
     const t = await registerPlayer('t2', 'p1');
     expect(t.registrations.length).toBe(7);
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg).toBeTruthy();
     expect(reg!.withdrawn).toBe(false);
@@ -220,7 +220,7 @@ describe('registerPlayer', () => {
 
     const t = await registerPlayer('t2', 'p1', undefined, divId);
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg!.divisionId).toBe(divId);
   });
@@ -228,7 +228,7 @@ describe('registerPlayer', () => {
   it('registers with specific rounds', async () => {
     const t = await registerPlayer('t2', 'p1', [1, 3]);
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg!.roundsParticipating).toEqual([1, 3]);
   });
@@ -242,7 +242,7 @@ describe('registerPlayer', () => {
     await withdrawPlayer('t2', 'p7');
     const t = await registerPlayer('t2', 'p7');
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p7'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p7'
     );
     expect(reg!.withdrawn).toBe(false);
   });
@@ -260,7 +260,7 @@ describe('withdrawPlayer', () => {
   it('marks registration as withdrawn', async () => {
     const t = await withdrawPlayer('t1', 'p1');
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg!.withdrawn).toBe(true);
   });
@@ -274,7 +274,7 @@ describe('updatePlayerRounds', () => {
   it('updates rounds participating', async () => {
     const t = await updatePlayerRounds('t1', 'p1', [1, 3]);
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg!.roundsParticipating).toEqual([1, 3]);
   });
@@ -335,7 +335,7 @@ describe('removeDivision', () => {
     // Remove the division
     const t2 = await removeDivision('t3', divId);
     const reg = t2.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
     );
     expect(reg!.divisionId).toBeUndefined();
   });
@@ -461,7 +461,7 @@ describe('getDivisionStandings', () => {
     // All results should be from dan division players
     const danPlayerIds = t.registrations
       .filter((r) => r.divisionId === danDivId && !r.withdrawn)
-      .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId._id));
+      .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id));
     for (const standing of s) {
       expect(danPlayerIds).toContain(standing.playerId);
     }

@@ -1,1 +1,1 @@
-"""Integration tests for nyig-td-api tournament management."""
+"""Integration tests for pairing-api tournament management."""

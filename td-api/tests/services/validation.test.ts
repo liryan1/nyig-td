@@ -37,6 +37,7 @@ describe('Validation Schemas', () => {
         name: 'John Doe',
         rank: '5k',
         club: 'NYC Go Club',
+        agaId: '12345',
         email: 'john@example.com',
       });
       expect(result.success).toBe(true);
@@ -60,6 +61,7 @@ describe('Validation Schemas', () => {
       const result = createPlayerSchema.safeParse({
         name: 'John Doe',
         rank: '5k',
+        agaId: '12345',
         email: 'invalid-email',
       });
       expect(result.success).toBe(false);

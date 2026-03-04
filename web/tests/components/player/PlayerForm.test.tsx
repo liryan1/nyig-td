@@ -63,6 +63,7 @@ describe('PlayerForm', () => {
     await user.type(screen.getByLabelText(/Name/), 'Jane Doe');
     await user.type(screen.getByLabelText(/Rank/), '2d');
     await user.type(screen.getByLabelText(/Club/), 'NYC Go');
+    await user.type(screen.getByLabelText(/AGA ID/), '10001');
     await user.click(screen.getByText('Save'));
 
     await waitFor(() => {
@@ -83,6 +84,7 @@ describe('PlayerForm', () => {
 
     await user.type(screen.getByLabelText(/Name/), 'Test');
     await user.type(screen.getByLabelText(/Rank/), '15k');
+    await user.type(screen.getByLabelText(/AGA ID/), '10002');
     await user.click(screen.getByText('Save'));
 
     await waitFor(() => {
@@ -96,7 +98,7 @@ describe('PlayerForm', () => {
       <PlayerForm
         onSubmit={() => {}}
         onCancel={() => {}}
-        defaultValues={{ name: 'Alice', rank: '5d', club: 'Go Club' }}
+        defaultValues={{ name: 'Alice', rank: '5d', club: 'Go Club', agaId: '12345' }}
       />
     );
 

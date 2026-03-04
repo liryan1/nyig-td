@@ -1,11 +1,13 @@
 // Enums and type aliases
 export type PairingAlgorithm = 'swiss' | 'mcmahon' | 'round_robin';
 export type GameResult = 'black_wins' | 'white_wins' | 'draw' | 'no_result' | 'black_forfeit' | 'white_forfeit' | 'double_forfeit';
-export type TournamentStatus = 'upcoming' | 'in_progress' | 'completed';
+export type TournamentStatus = 'setup' | 'registration' | 'in_progress' | 'completed';
 export type RoundStatus = 'pending' | 'paired' | 'completed';
 
 export type HandicapType = 'none' | 'rank_difference';
 export type HandicapModifier = 'none' | 'minus_1' | 'minus_2';
+
+export type TiebreakerCriteria = 'wins' | 'sos' | 'sds' | 'sosos' | 'hth';
 
 export interface Division {
   id: string;
@@ -20,14 +22,15 @@ export interface TournamentSettings {
   handicapModifier: HandicapModifier;
   mcmahonBar?: string;
   crossDivisionPairing: boolean;
+  tiebreakerOrder: TiebreakerCriteria[];
 }
 
 export interface Player {
-  _id: string;
+  id: string;
   name: string;
   rank: string;
   club?: string;
-  agaId?: string;
+  agaId: string;
   rating?: number;
   email?: string;
   createdAt: string;
@@ -66,7 +69,7 @@ export interface Round {
 }
 
 export interface Tournament {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   date: string;
@@ -97,7 +100,7 @@ export interface CreatePlayerForm {
   name: string;
   rank: string;
   club?: string;
-  agaId?: string;
+  agaId: string;
   email?: string;
 }
 
@@ -113,5 +116,6 @@ export interface CreateTournamentForm {
     handicapModifier: HandicapModifier;
     mcmahonBar?: string;
     crossDivisionPairing: boolean;
+    tiebreakerOrder: TiebreakerCriteria[];
   };
 }

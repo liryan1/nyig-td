@@ -38,8 +38,8 @@ describe('Player Routes', () => {
   describe('GET /api/players', () => {
     it('should return list of players', async () => {
       const players = [
-        { id: '1', name: 'Alice', rank: '5k', createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', name: 'Bob', rank: '3d', createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', name: 'Alice', rank: '5k', agaId: '10001', createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', name: 'Bob', rank: '3d', agaId: '10002', createdAt: new Date(), updatedAt: new Date() },
       ];
 
       mockList.mockResolvedValue(players);
@@ -77,20 +77,21 @@ describe('Player Routes', () => {
         id: '1',
         name: 'Alice',
         rank: '5k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       mockCreate.mockResolvedValue(player);
 
-      const response = await request(app).post('/api/players').send({ name: 'Alice', rank: '5k' });
+      const response = await request(app).post('/api/players').send({ name: 'Alice', rank: '5k', agaId: '10001' });
 
       expect(response.status).toBe(201);
       expect(response.body.player.name).toBe('Alice');
     });
 
-    it('should return 400 for invalid data', async () => {
-      const response = await request(app).post('/api/players').send({ name: 'Alice' }); // missing rank
+    it('should return 400 for missing agaId', async () => {
+      const response = await request(app).post('/api/players').send({ name: 'Alice', rank: '5k' }); // missing agaId
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Validation error');
@@ -99,7 +100,7 @@ describe('Player Routes', () => {
     it('should return 400 for invalid rank format', async () => {
       const response = await request(app)
         .post('/api/players')
-        .send({ name: 'Alice', rank: 'invalid' });
+        .send({ name: 'Alice', rank: 'invalid', agaId: '10001' });
 
       expect(response.status).toBe(400);
     });
@@ -111,6 +112,7 @@ describe('Player Routes', () => {
         id: '1',
         name: 'Alice',
         rank: '5k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -147,6 +149,7 @@ describe('Player Routes', () => {
         id: '1',
         name: 'Alice Updated',
         rank: '4k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };

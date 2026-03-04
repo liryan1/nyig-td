@@ -50,11 +50,11 @@ curl -X POST http://localhost:8000/handicap \
 
 ```bash
 # Clone and install
-cd nyig-td-api
+cd pairing-api
 uv sync
 
 # Run development server
-uv run uvicorn nyig_td_api.main:app --reload --port 8000
+uv run uvicorn pairing_api.main:app --reload --port 8000
 ```
 
 ### Testing
@@ -80,16 +80,16 @@ With the server running:
 
 ```bash
 # Build
-docker build -t nyig-td-api .
+docker build -t pairing-api .
 
 # Run
-docker run -p 8080:8080 nyig-td-api
+docker run -p 8080:8080 pairing-api
 ```
 
 ## Project Structure
 
 ```
-src/nyig_td_api/
+src/pairing_api/
 ├── main.py          # FastAPI app, CORS, health endpoints
 ├── schemas.py       # Pydantic request/response models
 └── routers/

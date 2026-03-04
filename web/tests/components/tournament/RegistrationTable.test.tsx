@@ -5,19 +5,21 @@ import { RegistrationTable } from '@/components/tournament/RegistrationTable';
 import type { PlayerRegistration, Player, Division } from '@/types';
 
 const player1: Player = {
-  _id: 'p1',
+  id: 'p1',
   name: 'Alice Chen',
   rank: '5d',
   club: 'NYC Go Club',
+  agaId: '12345',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
 const player2: Player = {
-  _id: 'p2',
+  id: 'p2',
   name: 'Bob Kim',
   rank: '3d',
   club: 'Brooklyn Go',
+  agaId: '12346',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };

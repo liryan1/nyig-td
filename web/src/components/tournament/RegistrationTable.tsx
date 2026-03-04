@@ -46,7 +46,7 @@ export function RegistrationTable({ registrations, divisions, onWithdraw, onChan
       <TableBody>
         {activeRegistrations.map((reg) => {
           const player = reg.playerId as Player;
-          const playerId = typeof reg.playerId === 'string' ? reg.playerId : player._id;
+          const playerId = typeof reg.playerId === 'string' ? reg.playerId : player.id;
 
           return (
             <TableRow key={playerId}>

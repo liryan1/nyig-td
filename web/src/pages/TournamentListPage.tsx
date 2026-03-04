@@ -67,9 +67,9 @@ export function TournamentListPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tournaments?.map((tournament) => (
           <TournamentCard
-            key={tournament._id}
+            key={tournament.id}
             tournament={tournament}
-            onDelete={() => handleDelete(tournament._id)}
+            onDelete={() => handleDelete(tournament.id)}
           />
         ))}
         {tournaments?.length === 0 && (
@@ -103,7 +103,8 @@ function TournamentCard({
   onDelete: () => void;
 }) {
   const statusVariants: Record<string, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-    upcoming: 'secondary',
+    setup: 'secondary',
+    registration: 'secondary',
     in_progress: 'default',
     completed: 'outline',
   };
@@ -113,7 +114,7 @@ function TournamentCard({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg">
-            <Link to={`/tournaments/${tournament._id}`} className="hover:text-primary">
+            <Link to={`/tournaments/${tournament.id}`} className="hover:text-primary">
               {tournament.name}
             </Link>
           </CardTitle>
@@ -134,7 +135,7 @@ function TournamentCard({
       </CardContent>
       <CardFooter className="gap-2">
         <Button variant="outline" size="sm" asChild>
-          <Link to={`/tournaments/${tournament._id}`}>Manage</Link>
+          <Link to={`/tournaments/${tournament.id}`}>Manage</Link>
         </Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
           Delete

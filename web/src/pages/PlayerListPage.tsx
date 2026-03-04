@@ -95,7 +95,7 @@ export function PlayerListPage() {
             </TableHeader>
             <TableBody>
               {players?.map((player) => (
-                <TableRow key={player._id}>
+                <TableRow key={player.id}>
                   <TableCell className="font-medium">{player.name}</TableCell>
                   <TableCell>{player.rank}</TableCell>
                   <TableCell className="text-muted-foreground">{player.club || '-'}</TableCell>
@@ -114,7 +114,7 @@ export function PlayerListPage() {
                       className="text-destructive hover:text-destructive"
                       onClick={() => {
                         if (confirm('Delete this player?')) {
-                          deleteMutation.mutate(player._id);
+                          deleteMutation.mutate(player.id);
                         }
                       }}
                     >
@@ -151,7 +151,7 @@ export function PlayerListPage() {
           </DialogHeader>
           {editPlayer && (
             <PlayerForm
-              onSubmit={(data) => updateMutation.mutate({ id: editPlayer._id, data })}
+              onSubmit={(data) => updateMutation.mutate({ id: editPlayer.id, data })}
               onCancel={() => setEditPlayer(null)}
               isLoading={updateMutation.isPending}
               defaultValues={editPlayer}

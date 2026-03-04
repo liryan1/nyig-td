@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../config/index.js';
 
-// Request types matching nyig-td-api
+// Request types matching pairing-api
 export interface PlayerInput {
   id: string;
   name: string;
@@ -63,6 +63,7 @@ export interface StandingsRequest {
   players: PlayerInput[];
   rounds: RoundInput[];
   through_round?: number;
+  tiebreaker_order?: string[];
 }
 
 export interface PlayerStandingOutput {

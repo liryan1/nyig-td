@@ -21,7 +21,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import type { CreateTournamentForm } from '@/types';
+import { TiebreakerOrderEditor } from '@/components/tournament/TiebreakerOrderEditor';
+import type { CreateTournamentForm, TiebreakerCriteria } from '@/types';
+
+const tiebreakerCriteriaEnum = z.enum(['wins', 'sos', 'sds', 'sosos', 'hth']);
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -35,6 +38,7 @@ const schema = z.object({
     handicapModifier: z.enum(['none', 'minus_1', 'minus_2']),
     mcmahonBar: z.string().regex(/^\d+[kdKD]$/).optional().or(z.literal('')),
     crossDivisionPairing: z.boolean(),
+    tiebreakerOrder: z.array(tiebreakerCriteriaEnum).min(1).max(4),
   }),
 });
 
@@ -60,6 +64,7 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
         handicapModifier: 'none',
         mcmahonBar: '3d',
         crossDivisionPairing: true,
+        tiebreakerOrder: ['wins', 'sos', 'sds', 'hth'] as TiebreakerCriteria[],
       },
       ...defaultValues,
     },
@@ -74,7 +79,8 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <div className='space-y-4 px-2 max-h-[80vh] overflow-y-auto'>
         <FormField
           control={form.control}
           name="name"
@@ -257,7 +263,27 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
           )}
         />
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+          <FormField
+            control={form.control}
+            name="settings.tiebreakerOrder"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tiebreaker Order</FormLabel>
+                <FormControl>
+                  <TiebreakerOrderEditor
+                    value={field.value as TiebreakerCriteria[]}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Order of criteria used to break ties in standings
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>

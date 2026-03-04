@@ -6,12 +6,14 @@ export const createPlayerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   rank: rankSchema,
   club: z.string().max(100).optional(),
-  agaId: z.string().max(20).optional(),
+  agaId: z.string().min(1).max(20),
   rating: z.number().int().optional(),
   email: z.string().email().optional(),
 });
 
 export const updatePlayerSchema = createPlayerSchema.partial();
+
+const tiebreakerCriteriaEnum = z.enum(['wins', 'sos', 'sds', 'sosos', 'hth']);
 
 export const tournamentSettingsSchema = z.object({
   numRounds: z.number().int().min(1).max(10),
@@ -20,6 +22,7 @@ export const tournamentSettingsSchema = z.object({
   handicapModifier: z.enum(['none', 'minus_1', 'minus_2']).default('none'),
   mcmahonBar: rankSchema.optional(),
   crossDivisionPairing: z.boolean().default(true),
+  tiebreakerOrder: z.array(tiebreakerCriteriaEnum).min(1).max(4).default(['wins', 'sos', 'sds', 'hth']),
 });
 
 export const createTournamentSchema = z.object({

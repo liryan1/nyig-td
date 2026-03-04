@@ -31,6 +31,7 @@ export class TournamentService {
           handicapModifier: data.settings.handicapModifier,
           mcmahonBar: data.settings.mcmahonBar,
           crossDivisionPairing: data.settings.crossDivisionPairing,
+          tiebreakerOrder: data.settings.tiebreakerOrder,
         },
         divisions: [],
         registrations: [],
@@ -45,9 +46,27 @@ export class TournamentService {
   }
 
   async get(id: string) {
-    return prisma.tournament.findUnique({
+    const tournament = await prisma.tournament.findUnique({
       where: { id },
     });
+    if (!tournament) return null;
+
+    // Enrich registrations with player data
+    const playerIds = tournament.registrations.map((r) => r.playerId);
+    if (playerIds.length === 0) return tournament;
+
+    const players = await prisma.player.findMany({
+      where: { id: { in: playerIds } },
+    });
+    const playerMap = new Map(players.map((p) => [p.id, p]));
+
+    return {
+      ...tournament,
+      registrations: tournament.registrations.map((r) => ({
+        ...r,
+        playerId: playerMap.get(r.playerId) ?? r.playerId,
+      })),
+    };
   }
 
   async list(filters: { status?: string; limit?: number; skip?: number } = {}) {
@@ -743,6 +762,7 @@ export class TournamentService {
       })),
       rounds: completedRounds,
       through_round: throughRound,
+      tiebreaker_order: tournament.settings.tiebreakerOrder,
     });
 
     return response.standings.map((s) => ({

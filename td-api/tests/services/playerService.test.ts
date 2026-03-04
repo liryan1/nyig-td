@@ -52,6 +52,7 @@ describe('PlayerService', () => {
         name: 'John Doe',
         rank: '5k',
         club: 'NYC Go Club',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -62,6 +63,7 @@ describe('PlayerService', () => {
         name: 'John Doe',
         rank: '5k',
         club: 'NYC Go Club',
+        agaId: '10001',
       });
 
       expect(mockValidateRanks).toHaveBeenCalledWith(['5k']);
@@ -79,13 +81,14 @@ describe('PlayerService', () => {
         id: '507f1f77bcf86cd799439011',
         name: 'Jane Doe',
         rank: '5k',
+        agaId: '10002',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       mockCreate.mockResolvedValue(playerData);
 
-      await service.create({ name: 'Jane Doe', rank: '5K' });
+      await service.create({ name: 'Jane Doe', rank: '5K', agaId: '10002' });
 
       expect(mockCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({ rank: '5k' }),
@@ -102,6 +105,7 @@ describe('PlayerService', () => {
         service.create({
           name: 'John Doe',
           rank: 'invalid',
+          agaId: '10003',
         })
       ).rejects.toThrow('Invalid rank: invalid');
     });
@@ -113,6 +117,7 @@ describe('PlayerService', () => {
         id: '507f1f77bcf86cd799439011',
         name: 'John Doe',
         rank: '5k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -139,8 +144,8 @@ describe('PlayerService', () => {
   describe('list', () => {
     it('should list players with default pagination', async () => {
       const players = [
-        { id: '1', name: 'Alice', rank: '5k', createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', name: 'Bob', rank: '3d', createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', name: 'Alice', rank: '5k', agaId: '10001', createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', name: 'Bob', rank: '3d', agaId: '10002', createdAt: new Date(), updatedAt: new Date() },
       ];
 
       mockFindMany.mockResolvedValue(players);
@@ -176,6 +181,7 @@ describe('PlayerService', () => {
         id: '1',
         name: 'Jane Doe',
         rank: '5k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -198,6 +204,7 @@ describe('PlayerService', () => {
         id: '1',
         name: 'Jane Doe',
         rank: '3d',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -228,6 +235,7 @@ describe('PlayerService', () => {
         id: '1',
         name: 'Test',
         rank: '4k',
+        agaId: '10001',
         createdAt: new Date(),
         updatedAt: new Date(),
       };

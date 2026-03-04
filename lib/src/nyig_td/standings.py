@@ -1,12 +1,52 @@
-"""Standings calculation with fixed tiebreakers."""
+"""Standings calculation with configurable tiebreakers."""
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
+from functools import cmp_to_key
 from typing import Any, Optional
 
 from .models import (
     Tournament, Player, GameResult
 )
+
+
+class TiebreakerCriteria(Enum):
+    """Available tiebreaker criteria."""
+    WINS = "wins"
+    SOS = "sos"
+    SDS = "sds"
+    SOSOS = "sosos"
+    HTH = "hth"
+
+
+DEFAULT_TIEBREAKER_ORDER = [
+    TiebreakerCriteria.WINS,
+    TiebreakerCriteria.SOS,
+    TiebreakerCriteria.SDS,
+    TiebreakerCriteria.HTH,
+]
+
+
+@dataclass(frozen=True)
+class TiebreakerOrder:
+    """Ordered list of tiebreaker criteria (1-4 items, no duplicates)."""
+    criteria: tuple[TiebreakerCriteria, ...] = field(
+        default_factory=lambda: tuple(DEFAULT_TIEBREAKER_ORDER)
+    )
+
+    def __post_init__(self) -> None:
+        if len(self.criteria) < 1:
+            raise ValueError("Must have at least 1 tiebreaker criterion")
+        if len(self.criteria) > 4:
+            raise ValueError("Cannot have more than 4 tiebreaker criteria")
+        if len(set(self.criteria)) != len(self.criteria):
+            raise ValueError("Tiebreaker criteria must not contain duplicates")
+
+    @classmethod
+    def from_list(cls, criteria: list[TiebreakerCriteria]) -> TiebreakerOrder:
+        """Create from a list of criteria."""
+        return cls(criteria=tuple(criteria))
 
 
 @dataclass
@@ -29,25 +69,27 @@ class PlayerStanding:
 
 
 class StandingsCalculator:
-    """Calculate tournament standings with fixed tiebreaker order."""
+    """Calculate tournament standings with configurable tiebreaker order."""
 
     def calculate(
         self,
         tournament: Tournament,
         through_round: Optional[int] = None,
+        tiebreaker_order: Optional[TiebreakerOrder] = None,
     ) -> list[PlayerStanding]:
         """
         Calculate standings through specified round.
 
-        Sorted by: Wins -> SOS -> SDS -> SOSOS
-
         Args:
             tournament: The tournament
             through_round: Calculate through this round (None = all completed)
+            tiebreaker_order: Custom tiebreaker order (default: WINS, SOS, SDS, HTH)
 
         Returns:
             List of PlayerStanding sorted by tiebreakers
         """
+        if tiebreaker_order is None:
+            tiebreaker_order = TiebreakerOrder()
         if through_round is None:
             # Find last completed round
             through_round = 0
@@ -142,6 +184,30 @@ class StandingsCalculator:
             )
             stats["sosos"] = sosos
 
+        # Build HTH lookup: hth_results[(a_id, b_id)] = 1 if A beat B, -1 if B beat A, 0 if split/no game
+        hth_results: dict[tuple[str, str], int] = {}
+        for pid, stats in player_stats.items():
+            for opp_id in set(stats["opponents"]):
+                if (pid, opp_id) in hth_results:
+                    continue
+                # Count wins of pid over opp_id and vice versa
+                pid_wins_over_opp = sum(
+                    1 for d in player_stats[pid]["defeated"] if d == opp_id
+                )
+                opp_wins_over_pid = sum(
+                    1 for d in player_stats[opp_id]["defeated"] if d == pid
+                ) if opp_id in player_stats else 0
+
+                if pid_wins_over_opp > opp_wins_over_pid:
+                    hth_results[(pid, opp_id)] = 1
+                    hth_results[(opp_id, pid)] = -1
+                elif opp_wins_over_pid > pid_wins_over_opp:
+                    hth_results[(pid, opp_id)] = -1
+                    hth_results[(opp_id, pid)] = 1
+                else:
+                    hth_results[(pid, opp_id)] = 0
+                    hth_results[(opp_id, pid)] = 0
+
         # Build standings list
         standings = [
             PlayerStanding(
@@ -156,19 +222,48 @@ class StandingsCalculator:
             for stats in player_stats.values()
         ]
 
-        # Sort by wins, then SOS, then SDS, then SOSOS
-        standings.sort(
-            key=lambda s: (s.wins, s.sos, s.sds, s.sosos),
-            reverse=True
-        )
+        # Build comparator based on tiebreaker order
+        stat_getters: dict[TiebreakerCriteria, str] = {
+            TiebreakerCriteria.WINS: "wins",
+            TiebreakerCriteria.SOS: "sos",
+            TiebreakerCriteria.SDS: "sds",
+            TiebreakerCriteria.SOSOS: "sosos",
+        }
 
-        # Assign ranks (handle ties: same rank when wins AND sos match)
+        def compare(a: PlayerStanding, b: PlayerStanding) -> int:
+            for criterion in tiebreaker_order.criteria:
+                if criterion == TiebreakerCriteria.HTH:
+                    hth = hth_results.get((a.player.id, b.player.id), 0)
+                    if hth != 0:
+                        return -hth  # negative because sort is ascending, we want higher first
+                else:
+                    attr = stat_getters[criterion]
+                    a_val = getattr(a, attr)
+                    b_val = getattr(b, attr)
+                    if a_val > b_val:
+                        return -1
+                    elif a_val < b_val:
+                        return 1
+            return 0
+
+        standings.sort(key=cmp_to_key(compare))
+
+        # Assign ranks using the full tiebreaker tuple for non-HTH criteria
+        non_hth_criteria = [
+            c for c in tiebreaker_order.criteria
+            if c != TiebreakerCriteria.HTH
+        ]
+
+        def rank_key(s: PlayerStanding) -> tuple[float, ...]:
+            return tuple(
+                getattr(s, stat_getters[c]) for c in non_hth_criteria
+            )
+
         current_rank = 1
         for i, standing in enumerate(standings):
             if i > 0:
                 prev = standings[i - 1]
-                if (standing.wins != prev.wins or
-                    standing.sos != prev.sos):
+                if rank_key(standing) != rank_key(prev):
                     current_rank = i + 1
             standing.rank = current_rank
 
