@@ -41,6 +41,8 @@ export const generatePairings = api.generatePairings;
 export const unpairMatch = api.unpairMatch;
 export const manualPair = api.manualPair;
 export const recordResult = api.recordResult;
+export const publishRound = api.publishRound;
+export const getPublicTournament = api.getPublicTournament;
 
 export const getStandings = api.getStandings;
 export const getDivisionStandings = api.getDivisionStandings;

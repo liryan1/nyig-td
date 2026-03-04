@@ -53,6 +53,7 @@ export interface Bye {
 export interface Round {
   number: number;
   status: RoundStatus;
+  published?: boolean;
   pairings: PairingResult[];
   byes: Bye[];
   pairedAt?: Date;

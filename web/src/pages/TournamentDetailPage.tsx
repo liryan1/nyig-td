@@ -13,6 +13,7 @@ import {
   unpairMatch,
   manualPair,
   recordResult,
+  publishRound,
   getStandings,
   getDivisionStandings,
   addDivision,
@@ -59,6 +60,7 @@ export function TournamentDetailPage() {
   const [showBulkRegister, setShowBulkRegister] = useState(false);
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
   const [hasPendingRoundChanges, setHasPendingRoundChanges] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const blocker = useBlocker(hasPendingRoundChanges);
 
@@ -168,6 +170,12 @@ export function TournamentDetailPage() {
     },
   });
 
+  const publishRoundMutation = useMutation({
+    mutationFn: ({ roundNumber, published }: { roundNumber: number; published: boolean }) =>
+      publishRound(id!, roundNumber, published),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
+  });
+
   if (isLoading) {
     return <Spinner />;
   }
@@ -210,6 +218,18 @@ export function TournamentDetailPage() {
           <span className="text-sm text-muted-foreground">
             {tournament.settings.numRounds} rounds | {tournament.settings.pairingAlgorithm.toUpperCase()}
           </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = `${window.location.origin}/tournaments/${id}/public`;
+              navigator.clipboard.writeText(url);
+              setLinkCopied(true);
+              setTimeout(() => setLinkCopied(false), 2000);
+            }}
+          >
+            {linkCopied ? 'Copied!' : 'Copy Public Link'}
+          </Button>
         </div>
       </div>
 
@@ -265,6 +285,9 @@ export function TournamentDetailPage() {
             }
             onManualPair={(roundNumber, player1Id, player2Id) =>
               manualPairMutation.mutate({ roundNumber, player1Id, player2Id })
+            }
+            onPublishRound={(roundNumber, published) =>
+              publishRoundMutation.mutate({ roundNumber, published })
             }
             isPairing={pairMutation.isPending}
           />

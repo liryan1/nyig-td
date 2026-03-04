@@ -72,6 +72,10 @@ export const bulkRegisterSchema = z.object({
   ).min(1, 'At least one player is required'),
 });
 
+export const publishRoundSchema = z.object({
+  published: z.boolean(),
+});
+
 export const manualPairSchema = z.object({
   player1Id: z.string().min(1),
   player2Id: z.string().min(1),

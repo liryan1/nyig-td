@@ -174,6 +174,27 @@ export async function recordResult(
   return response.data.tournament;
 }
 
+export async function publishRound(
+  tournamentId: string,
+  roundNumber: number,
+  published: boolean
+): Promise<Tournament> {
+  const response = await api.patch<{ tournament: Tournament }>(
+    `/tournaments/${tournamentId}/rounds/${roundNumber}/publish`,
+    { published }
+  );
+  return response.data.tournament;
+}
+
+export async function getPublicTournament(
+  id: string
+): Promise<{ tournament: Tournament; standings: PlayerStanding[] }> {
+  const response = await api.get<{ tournament: Tournament; standings: PlayerStanding[] }>(
+    `/tournaments/${id}/public`
+  );
+  return response.data;
+}
+
 // ========== Divisions ==========
 
 export async function addDivision(

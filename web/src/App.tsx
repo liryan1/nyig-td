@@ -4,6 +4,7 @@ import { Layout } from '@/components/Layout';
 import { TournamentListPage } from '@/pages/TournamentListPage';
 import { TournamentDetailPage } from '@/pages/TournamentDetailPage';
 import { PlayerListPage } from '@/pages/PlayerListPage';
+import { PublicTournamentPage } from '@/pages/PublicTournamentPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route path="/tournaments/:id/public" element={<PublicTournamentPage />} />
           <Route element={<Layout />}>
             <Route path="/" element={<TournamentListPage />} />
             <Route path="/tournaments/:id" element={<TournamentDetailPage />} />

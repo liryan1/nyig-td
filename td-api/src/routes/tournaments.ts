@@ -6,6 +6,7 @@ import {
   registerPlayerSchema,
   updateRegistrationSchema,
   recordResultSchema,
+  publishRoundSchema,
   manualPairSchema,
   createDivisionSchema,
   updateDivisionSchema,
@@ -36,6 +37,30 @@ router.post('/', async (req, res, next) => {
     const data = createTournamentSchema.parse(req.body);
     const tournament = await tournamentService.create(data);
     res.status(201).json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get public tournament (published rounds only)
+router.get('/:id/public', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const tournament = await tournamentService.getPublic(id);
+    if (!tournament) {
+      res.status(404).json({ error: 'Tournament not found' });
+      return;
+    }
+
+    // Also compute standings
+    let standings: import('../types/index.js').PlayerStanding[] = [];
+    try {
+      standings = await tournamentService.getStandings(id);
+    } catch {
+      // No standings available yet
+    }
+
+    res.json({ tournament, standings });
   } catch (error) {
     next(error);
   }
@@ -222,6 +247,23 @@ router.get('/:id/divisions/:divisionId/standings', async (req, res, next) => {
 });
 
 // ====== Rounds ======
+
+// Publish/unpublish round
+router.patch('/:id/rounds/:roundNumber/publish', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const roundNumber = parseInt(String(req.params.roundNumber), 10);
+    const { published } = publishRoundSchema.parse(req.body);
+    const tournament = await tournamentService.publishRound(id, roundNumber, published);
+    if (!tournament) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Unpair match
 router.delete('/:id/rounds/:roundNumber/pairings/:boardNumber', async (req, res, next) => {

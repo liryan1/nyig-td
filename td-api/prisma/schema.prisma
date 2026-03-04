@@ -66,6 +66,7 @@ type PlayerRegistration {
 type Round {
   number      Int
   status      String    @default("pending")
+  published   Boolean   @default(false)
   pairings    Pairing[]
   byes        Bye[]
   pairedAt    DateTime?

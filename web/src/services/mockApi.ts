@@ -651,6 +651,39 @@ function updateStandings(tournament: Tournament) {
   standings[tournament.id] = standingsList;
 }
 
+// ========== Publish ==========
+
+export async function publishRound(
+  tournamentId: string,
+  roundNumber: number,
+  published: boolean
+): Promise<Tournament> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const round = tournament.rounds.find((r) => r.number === roundNumber);
+  if (!round) throw new Error('Round not found');
+
+  round.published = published;
+  tournament.updatedAt = new Date().toISOString();
+  return structuredClone(tournament);
+}
+
+export async function getPublicTournament(
+  id: string
+): Promise<{ tournament: Tournament; standings: PlayerStanding[] }> {
+  await delay();
+  const tournament = tournaments.find((t) => t.id === id);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const publicTournament = structuredClone(tournament);
+  publicTournament.rounds = publicTournament.rounds.filter((r) => r.published);
+
+  const tournamentStandings = standings[id] ?? [];
+  return { tournament: publicTournament, standings: tournamentStandings };
+}
+
 // ========== Standings ==========
 
 export async function getStandings(

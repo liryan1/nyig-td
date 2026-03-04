@@ -27,6 +27,7 @@ interface RoundManagerProps {
   onRecordResult: (roundNumber: number, boardNumber: number, result: GameResult) => void;
   onUnpairMatch: (roundNumber: number, boardNumber: number) => void;
   onManualPair: (roundNumber: number, player1Id: string, player2Id: string) => void;
+  onPublishRound?: (roundNumber: number, published: boolean) => void;
   isPairing: boolean;
 }
 
@@ -36,6 +37,7 @@ export function RoundManager({
   onRecordResult,
   onUnpairMatch,
   onManualPair,
+  onPublishRound,
   isPairing,
 }: RoundManagerProps) {
   const [activeRound, setActiveRound] = useState(1);
@@ -123,7 +125,19 @@ export function RoundManager({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Round {round.number}</CardTitle>
-            <RoundStatusBadge status={round.status} />
+            <div className="flex items-center gap-2">
+              {round.published && <Badge variant="outline">Published</Badge>}
+              {onPublishRound && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPublishRound(round.number, !round.published)}
+                >
+                  {round.published ? 'Unpublish' : 'Publish'}
+                </Button>
+              )}
+              <RoundStatusBadge status={round.status} />
+            </div>
           </CardHeader>
           <CardContent>
             {/* Pairings table — shown when there are pairings */}

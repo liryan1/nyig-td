@@ -39,6 +39,7 @@ export class TournamentService {
         rounds: rounds.map((r) => ({
           number: r.number,
           status: r.status,
+          published: false,
           pairings: [],
           byes: [],
         })),
@@ -874,6 +875,52 @@ export class TournamentService {
       sds: s.sds,
       sosos: s.sosos,
     }));
+  }
+  async publishRound(tournamentId: string, roundNumber: number, published: boolean) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    const roundIdx = tournament.rounds.findIndex((r) => r.number === roundNumber);
+    if (roundIdx === -1) return null;
+
+    const updatedRounds = tournament.rounds.map((r, i) =>
+      i === roundIdx ? { ...r, published } : r
+    );
+
+    return prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { rounds: updatedRounds },
+    });
+  }
+
+  async getPublic(id: string) {
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+    });
+    if (!tournament) return null;
+
+    // Filter rounds to only published ones
+    const publishedRounds = tournament.rounds.filter((r) => r.published);
+
+    // Enrich registrations with player data
+    const playerIds = tournament.registrations.map((r) => r.playerId);
+    if (playerIds.length === 0) {
+      return { ...tournament, rounds: publishedRounds };
+    }
+
+    const players = await prisma.player.findMany({
+      where: { id: { in: playerIds } },
+    });
+    const playerMap = new Map(players.map((p) => [p.id, p]));
+
+    return {
+      ...tournament,
+      rounds: publishedRounds,
+      registrations: tournament.registrations.map((r) => ({
+        ...r,
+        playerId: (playerMap.get(r.playerId) ?? r.playerId) as string,
+      })),
+    };
   }
 }
 

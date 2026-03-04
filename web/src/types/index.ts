@@ -62,6 +62,7 @@ export interface Bye {
 export interface Round {
   number: number;
   status: RoundStatus;
+  published?: boolean;
   pairings: Pairing[];
   byes: Bye[];
   pairedAt?: string;
