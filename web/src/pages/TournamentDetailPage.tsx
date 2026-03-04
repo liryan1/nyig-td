@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useCallback, useDeferredValue, useMemo } from 'react';
+import { useParams, Link, useBlocker } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getTournament,
@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -53,6 +55,13 @@ export function TournamentDetailPage() {
   const queryClient = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
+  const [hasPendingRoundChanges, setHasPendingRoundChanges] = useState(false);
+
+  const blocker = useBlocker(hasPendingRoundChanges);
+
+  const handleDirtyChange = useCallback((isDirty: boolean) => {
+    setHasPendingRoundChanges(isDirty);
+  }, []);
 
   const { data: tournament, isLoading, isError } = useQuery({
     queryKey: ['tournament', id],
@@ -107,6 +116,16 @@ export function TournamentDetailPage() {
   const changeDivisionMutation = useMutation({
     mutationFn: ({ playerId, divisionId }: { playerId: string; divisionId: string | null }) =>
       updateRegistration(id!, playerId, { divisionId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
+  });
+
+  const saveRoundsMutation = useMutation({
+    mutationFn: (changes: Array<{ playerId: string; roundsParticipating: number[] }>) =>
+      Promise.all(
+        changes.map((c) =>
+          updateRegistration(id!, c.playerId, { roundsParticipating: c.roundsParticipating })
+        )
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
@@ -203,10 +222,14 @@ export function TournamentDetailPage() {
               <RegistrationTable
                 registrations={tournament.registrations}
                 divisions={tournament.divisions}
+                numRounds={tournament.settings.numRounds}
                 onWithdraw={(playerId) => withdrawMutation.mutate(playerId)}
                 onChangeDivision={(playerId, divisionId) =>
                   changeDivisionMutation.mutate({ playerId, divisionId })
                 }
+                onSaveRounds={(changes) => saveRoundsMutation.mutate(changes)}
+                onDirtyChange={handleDirtyChange}
+                isSaving={saveRoundsMutation.isPending}
               />
             </CardContent>
           </Card>
@@ -307,6 +330,25 @@ export function TournamentDetailPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={blocker.state === 'blocked'} onOpenChange={() => blocker.reset?.()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes to round participation. Discard changes and leave?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => blocker.reset?.()}>
+              Stay
+            </Button>
+            <Button variant="destructive" onClick={() => blocker.proceed?.()}>
+              Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -340,16 +382,21 @@ function PlayerSelector({
   isLoading: boolean;
 }) {
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedRounds, setSelectedRounds] = useState<Set<number>>(
     () => new Set(Array.from({ length: numRounds }, (_, i) => i + 1))
   );
 
-  const filtered = players.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.rank.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    if (!deferredSearch) return players;
+    const q = deferredSearch.toLowerCase();
+    return players.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.agaId?.toLowerCase().includes(q)
+    );
+  }, [players, deferredSearch]);
 
   const toggleRound = (round: number) => {
     setSelectedRounds((prev) => {
@@ -410,7 +457,7 @@ function PlayerSelector({
 
       <Input
         type="text"
-        placeholder="Search players..."
+        placeholder="Search by name or AGA ID..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="mb-4"

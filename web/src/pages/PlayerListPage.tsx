@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { listPlayers, createPlayer, updatePlayer, deletePlayer } from '@/services';
@@ -27,12 +27,24 @@ export function PlayerListPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editPlayer, setEditPlayer] = useState<Player | null>(null);
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const queryClient = useQueryClient();
 
   const { data: players, isLoading } = useQuery({
-    queryKey: ['players', search],
-    queryFn: () => listPlayers({ search: search || undefined }),
+    queryKey: ['players'],
+    queryFn: () => listPlayers(),
   });
+
+  const filtered = useMemo(() => {
+    if (!players) return [];
+    if (!deferredSearch) return players;
+    const q = deferredSearch.toLowerCase();
+    return players.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.agaId?.toLowerCase().includes(q)
+    );
+  }, [players, deferredSearch]);
 
   const createMutation = useMutation({
     mutationFn: createPlayer,
@@ -74,7 +86,7 @@ export function PlayerListPage() {
         <CardContent className="pt-6">
           <Input
             type="text"
-            placeholder="Search players..."
+            placeholder="Search by name or AGA ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -94,7 +106,7 @@ export function PlayerListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {players?.map((player) => (
+              {filtered.map((player) => (
                 <TableRow key={player.id}>
                   <TableCell className="font-medium">{player.name}</TableCell>
                   <TableCell>{player.rank}</TableCell>
@@ -125,7 +137,7 @@ export function PlayerListPage() {
               ))}
             </TableBody>
           </Table>
-          {players?.length === 0 && (
+          {filtered.length === 0 && (
             <p className="text-muted-foreground text-center py-8">No players found.</p>
           )}
         </CardContent>
