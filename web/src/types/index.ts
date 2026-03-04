@@ -43,6 +43,7 @@ export interface PlayerRegistration {
   roundsParticipating: number[];
   registeredAt: string;
   withdrawn: boolean;
+  checkedIn: boolean;
 }
 
 export interface Pairing {

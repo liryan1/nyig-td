@@ -5,6 +5,7 @@ import { TournamentListPage } from '@/pages/TournamentListPage';
 import { TournamentDetailPage } from '@/pages/TournamentDetailPage';
 import { PlayerListPage } from '@/pages/PlayerListPage';
 import { PublicTournamentPage } from '@/pages/PublicTournamentPage';
+import { CheckInPage } from '@/pages/CheckInPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/tournaments/:id/public" element={<PublicTournamentPage />} />
+          <Route path="/tournaments/:id/checkin" element={<CheckInPage />} />
           <Route element={<Layout />}>
             <Route path="/" element={<TournamentListPage />} />
             <Route path="/tournaments/:id" element={<TournamentDetailPage />} />

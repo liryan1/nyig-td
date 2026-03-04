@@ -203,6 +203,7 @@ export async function registerPlayer(
       roundsParticipating: roundsParticipating ?? [],
       registeredAt: new Date().toISOString(),
       withdrawn: false,
+      checkedIn: false,
     });
   }
 
@@ -253,6 +254,7 @@ export async function bulkRegisterPlayers(
       roundsParticipating: [],
       registeredAt: new Date().toISOString(),
       withdrawn: false,
+      checkedIn: false,
     });
   }
 
@@ -322,6 +324,74 @@ export async function updateRegistration(
   }
   tournament.updatedAt = new Date().toISOString();
   return structuredClone(tournament);
+}
+
+// ========== Check-In ==========
+
+export async function checkInPlayer(
+  tournamentId: string,
+  playerId: string,
+  checkedIn: boolean
+): Promise<Tournament> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const registration = tournament.registrations.find((r) => {
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
+    return id === playerId;
+  });
+  if (!registration) throw new Error('Player not registered');
+  if (registration.withdrawn) throw new Error('Cannot check in a withdrawn player');
+
+  registration.checkedIn = checkedIn;
+  tournament.updatedAt = new Date().toISOString();
+  return structuredClone(tournament);
+}
+
+export async function bulkCheckInPlayers(
+  tournamentId: string,
+  playerIds: string[]
+): Promise<Tournament> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const playerIdSet = new Set(playerIds);
+  for (const reg of tournament.registrations) {
+    const id = typeof reg.playerId === 'string' ? reg.playerId : reg.playerId.id;
+    if (playerIdSet.has(id) && !reg.withdrawn) {
+      reg.checkedIn = true;
+    }
+  }
+
+  tournament.updatedAt = new Date().toISOString();
+  return structuredClone(tournament);
+}
+
+export async function selfCheckIn(
+  tournamentId: string,
+  playerId: string
+): Promise<{ playerName: string; checkedIn: boolean }> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const registration = tournament.registrations.find((r) => {
+    const id = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
+    return id === playerId;
+  });
+  if (!registration) throw new Error('Player not registered');
+  if (registration.withdrawn) throw new Error('Cannot check in a withdrawn player');
+
+  registration.checkedIn = true;
+  tournament.updatedAt = new Date().toISOString();
+
+  const player = typeof registration.playerId === 'string'
+    ? players.find((p) => p.id === registration.playerId)
+    : registration.playerId;
+
+  return { playerName: (player as Player)?.name ?? 'Unknown', checkedIn: true };
 }
 
 // ========== Divisions ==========

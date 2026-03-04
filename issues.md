@@ -5,8 +5,6 @@ See README.md for acronym definitions.
 ## Features
 
 - Deep dive mcmahon pairings with the links https://en.wikipedia.org/wiki/McMahon_system_tournament, https://senseis.xmp.net/?McMahonPairing, https://www.gokgs.com/help/tournMcMahon.html, https://www.britgo.org/organisers/mcmahonpairing.html. Then evaluate the current mcmahon pairing logic in lib.
-  
-- Scan QR code or visit link for players to checkin. Allow TD to checkin one player and bulk check-in multiple players. Only checked in players can be paired
 - Support slide and Fold pairing format. TD can change this after tournament creation.
 
 ## Done
@@ -22,3 +20,4 @@ See README.md for acronym definitions.
 - [x] Support bulk player register: CSV format. Show confirmation screen of players that will be created, and count of players that will be added. Show players with different name than in DB.
 - [x] Pairing disabled if previous round was not marked as completed
 - [x] Show pairing page - public link to players. TD can publish/unpublish pairings.
+- [ ] Scan QR code or visit link for players to checkin. Allow TD to checkin one player and bulk check-in multiple players. Only checked in players can be paired

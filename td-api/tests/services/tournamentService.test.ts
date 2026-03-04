@@ -325,7 +325,7 @@ describe('TournamentService', () => {
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
 
@@ -355,7 +355,7 @@ describe('TournamentService', () => {
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
         registrations: [
-          { playerId: 'player1', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
 
@@ -367,7 +367,7 @@ describe('TournamentService', () => {
     it('should reactivate withdrawn player', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: true },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: true, checkedIn: false },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -385,9 +385,9 @@ describe('TournamentService', () => {
     it('should reactivate withdrawn player while preserving other registrations', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [1], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'player2', roundsParticipating: [], registeredAt: new Date(), withdrawn: true },
-          { playerId: 'player3', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [1], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'player2', roundsParticipating: [], registeredAt: new Date(), withdrawn: true, checkedIn: false },
+          { playerId: 'player3', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -420,7 +420,7 @@ describe('TournamentService', () => {
     it('should mark player as withdrawn', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -438,8 +438,8 @@ describe('TournamentService', () => {
     it('should not affect other players when withdrawing', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'player2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'player2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -468,7 +468,7 @@ describe('TournamentService', () => {
     it('should update player rounds participation', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -494,9 +494,9 @@ describe('TournamentService', () => {
     it('should update only the target player rounds while preserving others', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [1], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'player2', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'player3', roundsParticipating: [1, 2, 3], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [1], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'player2', roundsParticipating: [1, 2], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'player3', roundsParticipating: [1, 2, 3], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -518,7 +518,7 @@ describe('TournamentService', () => {
     it('should assign a division to a player', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -536,7 +536,7 @@ describe('TournamentService', () => {
     it('should change a player division', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', divisionId: 'div1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', divisionId: 'div1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -554,7 +554,7 @@ describe('TournamentService', () => {
     it('should remove a player division with null', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'player1', divisionId: 'div1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'player1', divisionId: 'div1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -577,10 +577,10 @@ describe('TournamentService', () => {
       it('should generate pairings for 4 players in round 1', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p4', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p4', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -623,11 +623,11 @@ describe('TournamentService', () => {
       it('should generate pairings with bye for odd number of players (5 players)', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p4', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p5', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p4', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p5', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -662,10 +662,10 @@ describe('TournamentService', () => {
       it('should exclude withdrawn players from pairings', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: true }, // Withdrawn
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p4', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: true, checkedIn: false }, // Withdrawn
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p4', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -695,10 +695,10 @@ describe('TournamentService', () => {
       it('should only include players participating in specific round', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [1, 2], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [2, 3], withdrawn: false }, // Not in round 1
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false }, // All rounds
-            { playerId: 'p4', roundsParticipating: [1], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [1, 2], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [2, 3], withdrawn: false, checkedIn: true }, // Not in round 1
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true }, // All rounds
+            { playerId: 'p4', roundsParticipating: [1], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -730,10 +730,10 @@ describe('TournamentService', () => {
       it('should include completed round 1 data when pairing round 2', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p4', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p4', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -793,9 +793,9 @@ describe('TournamentService', () => {
       it('should include byes in previous round data', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -853,8 +853,8 @@ describe('TournamentService', () => {
             mcmahonBar: '1d',
           },
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -891,8 +891,8 @@ describe('TournamentService', () => {
             handicapModifier: 'none',
           },
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
         });
 
@@ -966,8 +966,8 @@ describe('TournamentService', () => {
       it('should throw error if previous round is not completed', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
           ],
           rounds: [
             { number: 1, status: 'in_progress', pairings: [
@@ -986,8 +986,8 @@ describe('TournamentService', () => {
       it('should allow pairing round 1 without previous round check', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
           ],
           rounds: [
             { number: 1, status: 'pending', pairings: [], byes: [] },
@@ -1019,8 +1019,8 @@ describe('TournamentService', () => {
     it('should throw error if previous round is not completed', async () => {
       const tournament = createTournamentData({
         registrations: [
-          { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'p2', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
         rounds: [
           { number: 1, status: 'paired', pairings: [
@@ -1210,8 +1210,8 @@ describe('TournamentService', () => {
       it('should calculate standings after one round', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1272,10 +1272,10 @@ describe('TournamentService', () => {
       it('should calculate standings after multiple rounds', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p4', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p4', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1335,8 +1335,8 @@ describe('TournamentService', () => {
       it('should filter standings to specific round', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1393,9 +1393,9 @@ describe('TournamentService', () => {
       it('should exclude withdrawn players from standings', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: true }, // Withdrawn
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: true, checkedIn: false }, // Withdrawn
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1433,9 +1433,9 @@ describe('TournamentService', () => {
       it('should include bye points in standings calculation', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p2', roundsParticipating: [], withdrawn: false },
-            { playerId: 'p3', roundsParticipating: [], withdrawn: false },
+            { playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p2', roundsParticipating: [], withdrawn: false, checkedIn: true },
+            { playerId: 'p3', roundsParticipating: [], withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1480,7 +1480,7 @@ describe('TournamentService', () => {
     describe('standings request format', () => {
       it('should call standings API without weights', async () => {
         const tournament = createTournamentData({
-          registrations: [{ playerId: 'p1', roundsParticipating: [], withdrawn: false }],
+          registrations: [{ playerId: 'p1', roundsParticipating: [], withdrawn: false, checkedIn: true }],
           rounds: [{ number: 1, status: 'completed', pairings: [], byes: [] }],
         });
 
@@ -1521,9 +1521,9 @@ describe('TournamentService', () => {
             { id: 'div-kyu', name: 'Kyu' },
           ],
           registrations: [
-            { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-            { playerId: 'p2', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-            { playerId: 'p3', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+            { playerId: 'p2', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+            { playerId: 'p3', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
           ],
           rounds: [
             {
@@ -1562,8 +1562,8 @@ describe('TournamentService', () => {
       it('should return all players when no divisionId specified', async () => {
         const tournament = createTournamentData({
           registrations: [
-            { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-            { playerId: 'p2', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+            { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+            { playerId: 'p2', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
           ],
           rounds: [],
         });
@@ -1705,10 +1705,10 @@ describe('TournamentService', () => {
           { id: 'div-kyu', name: 'Kyu' },
         ],
         registrations: [
-          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'p2', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'p3', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'p4', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'p2', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'p3', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'p4', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -1753,8 +1753,8 @@ describe('TournamentService', () => {
           { id: 'div-kyu', name: 'Kyu' },
         ],
         registrations: [
-          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
-          { playerId: 'p2', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
+          { playerId: 'p2', divisionId: 'div-kyu', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
       mockTournamentFindUnique.mockResolvedValue(tournament);
@@ -1789,7 +1789,7 @@ describe('TournamentService', () => {
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
         registrations: [
-          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p1', divisionId: 'div-open', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
 
@@ -1800,7 +1800,7 @@ describe('TournamentService', () => {
         where: { id: '507f1f77bcf86cd799439011' },
         data: {
           registrations: [
-            expect.objectContaining({ playerId: 'p1', divisionId: 'div-open', withdrawn: false }),
+            expect.objectContaining({ playerId: 'p1', divisionId: 'div-open', withdrawn: false, checkedIn: false }),
           ],
         },
       });
@@ -1812,7 +1812,7 @@ describe('TournamentService', () => {
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
         registrations: [
-          { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false },
+          { playerId: 'p1', roundsParticipating: [], registeredAt: new Date(), withdrawn: false, checkedIn: true },
         ],
       });
 

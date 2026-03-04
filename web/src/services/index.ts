@@ -33,6 +33,10 @@ export const withdrawPlayer = api.withdrawPlayer;
 export const updatePlayerRounds = api.updatePlayerRounds;
 export const updateRegistration = api.updateRegistration;
 
+export const checkInPlayer = api.checkInPlayer;
+export const bulkCheckInPlayers = api.bulkCheckInPlayers;
+export const selfCheckIn = api.selfCheckIn;
+
 export const addDivision = api.addDivision;
 export const updateDivision = api.updateDivision;
 export const removeDivision = api.removeDivision;

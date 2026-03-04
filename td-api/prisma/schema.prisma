@@ -61,6 +61,7 @@ type PlayerRegistration {
   roundsParticipating Int[]
   registeredAt        DateTime @default(now())
   withdrawn           Boolean  @default(false)
+  checkedIn           Boolean  @default(false)
 }
 
 type Round {

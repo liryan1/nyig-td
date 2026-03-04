@@ -18,6 +18,8 @@ import {
   getDivisionStandings,
   addDivision,
   removeDivision,
+  checkInPlayer,
+  bulkCheckInPlayers,
 } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +53,7 @@ import { RoundManager } from '@/components/tournament/RoundManager';
 import { StandingsTable } from '@/components/tournament/StandingsTable';
 import { BulkRegisterDialog } from '@/components/tournament/BulkRegisterDialog';
 import { TiebreakerOrderEditor } from '@/components/tournament/TiebreakerOrderEditor';
+import { QRCodeDialog } from '@/components/tournament/QRCodeDialog';
 import type { Tournament, Player, Division, GameResult, TiebreakerCriteria } from '@/types';
 
 export function TournamentDetailPage() {
@@ -61,6 +64,7 @@ export function TournamentDetailPage() {
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
   const [hasPendingRoundChanges, setHasPendingRoundChanges] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   const blocker = useBlocker(hasPendingRoundChanges);
 
@@ -141,6 +145,17 @@ export function TournamentDetailPage() {
           updateRegistration(id!, c.playerId, { roundsParticipating: c.roundsParticipating })
         )
       ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: ({ playerId, checkedIn }: { playerId: string; checkedIn: boolean }) =>
+      checkInPlayer(id!, playerId, checkedIn),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
+  });
+
+  const bulkCheckInMutation = useMutation({
+    mutationFn: (playerIds: string[]) => bulkCheckInPlayers(id!, playerIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
@@ -246,8 +261,26 @@ export function TournamentDetailPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
                 Registered Players ({tournament.registrations.filter(r => !r.withdrawn).length})
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  {tournament.registrations.filter(r => !r.withdrawn && r.checkedIn).length} checked in
+                </span>
               </CardTitle>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const activeIds = tournament.registrations
+                      .filter(r => !r.withdrawn)
+                      .map(r => typeof r.playerId === 'string' ? r.playerId : r.playerId.id);
+                    bulkCheckInMutation.mutate(activeIds);
+                  }}
+                  disabled={bulkCheckInMutation.isPending}
+                >
+                  Check In All
+                </Button>
+                <Button variant="outline" onClick={() => setShowQRCode(true)}>
+                  QR Code
+                </Button>
                 <Button variant="outline" onClick={() => setShowBulkRegister(true)}>
                   Import CSV
                 </Button>
@@ -267,6 +300,9 @@ export function TournamentDetailPage() {
                 }
                 onSaveRounds={(changes) => saveRoundsMutation.mutate(changes)}
                 onDirtyChange={handleDirtyChange}
+                onCheckIn={(playerId, checkedIn) =>
+                  checkInMutation.mutate({ playerId, checkedIn })
+                }
                 isSaving={saveRoundsMutation.isPending}
               />
             </CardContent>
@@ -379,6 +415,12 @@ export function TournamentDetailPage() {
         registeredPlayerIds={registeredPlayerIds}
         onConfirm={(players) => bulkRegisterMutation.mutate(players)}
         isLoading={bulkRegisterMutation.isPending}
+      />
+
+      <QRCodeDialog
+        open={showQRCode}
+        onOpenChange={setShowQRCode}
+        tournamentId={id!}
       />
 
       <Dialog open={blocker.state === 'blocked'} onOpenChange={() => blocker.reset?.()}>

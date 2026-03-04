@@ -195,6 +195,42 @@ export async function getPublicTournament(
   return response.data;
 }
 
+// ========== Check-In ==========
+
+export async function checkInPlayer(
+  tournamentId: string,
+  playerId: string,
+  checkedIn: boolean
+): Promise<Tournament> {
+  const response = await api.patch<{ tournament: Tournament }>(
+    `/tournaments/${tournamentId}/registrations/${playerId}/checkin`,
+    { checkedIn }
+  );
+  return response.data.tournament;
+}
+
+export async function bulkCheckInPlayers(
+  tournamentId: string,
+  playerIds: string[]
+): Promise<Tournament> {
+  const response = await api.post<{ tournament: Tournament }>(
+    `/tournaments/${tournamentId}/registrations/checkin/bulk`,
+    { playerIds }
+  );
+  return response.data.tournament;
+}
+
+export async function selfCheckIn(
+  tournamentId: string,
+  playerId: string
+): Promise<{ playerName: string; checkedIn: boolean }> {
+  const response = await api.post<{ playerName: string; checkedIn: boolean }>(
+    `/tournaments/${tournamentId}/checkin`,
+    { playerId }
+  );
+  return response.data;
+}
+
 // ========== Divisions ==========
 
 export async function addDivision(

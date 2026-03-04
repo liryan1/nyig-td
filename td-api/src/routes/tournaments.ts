@@ -11,6 +11,9 @@ import {
   createDivisionSchema,
   updateDivisionSchema,
   bulkRegisterSchema,
+  checkInSchema,
+  selfCheckInSchema,
+  bulkCheckInSchema,
 } from '../utils/validation.js';
 import type { GameResult } from '../types/index.js';
 
@@ -177,6 +180,57 @@ router.patch('/:id/registrations/:playerId', async (req, res, next) => {
       return;
     }
     res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====== Check-In ======
+
+// TD toggle check-in for a player
+router.patch('/:id/registrations/:playerId/checkin', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const playerId = String(req.params.playerId);
+    const { checkedIn } = checkInSchema.parse(req.body);
+    const tournament = await tournamentService.checkInPlayer(id, playerId, checkedIn);
+    if (!tournament) {
+      res.status(404).json({ error: 'Tournament or player not found' });
+      return;
+    }
+    res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// TD bulk check-in
+router.post('/:id/registrations/checkin/bulk', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const { playerIds } = bulkCheckInSchema.parse(req.body);
+    const tournament = await tournamentService.bulkCheckInPlayers(id, playerIds);
+    if (!tournament) {
+      res.status(404).json({ error: 'Tournament not found' });
+      return;
+    }
+    res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Public self-check-in
+router.post('/:id/checkin', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const { playerId } = selfCheckInSchema.parse(req.body);
+    const result = await tournamentService.selfCheckIn(id, playerId);
+    if (!result) {
+      res.status(404).json({ error: 'Tournament or player not found' });
+      return;
+    }
+    res.json(result);
   } catch (error) {
     next(error);
   }

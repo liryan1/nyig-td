@@ -88,6 +88,18 @@ export const createDivisionSchema = z.object({
 
 export const updateDivisionSchema = createDivisionSchema.partial();
 
+export const checkInSchema = z.object({
+  checkedIn: z.boolean(),
+});
+
+export const selfCheckInSchema = z.object({
+  playerId: z.string().min(1),
+});
+
+export const bulkCheckInSchema = z.object({
+  playerIds: z.array(z.string().min(1)).min(1),
+});
+
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;

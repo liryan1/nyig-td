@@ -26,6 +26,7 @@ interface RegistrationTableProps {
   onChangeDivision?: (playerId: string, divisionId: string | null) => void;
   onSaveRounds?: (changes: Array<{ playerId: string; roundsParticipating: number[] }>) => void;
   onDirtyChange?: (isDirty: boolean) => void;
+  onCheckIn?: (playerId: string, checkedIn: boolean) => void;
   isSaving?: boolean;
 }
 
@@ -45,6 +46,7 @@ export function RegistrationTable({
   onChangeDivision,
   onSaveRounds,
   onDirtyChange,
+  onCheckIn,
   isSaving,
 }: RegistrationTableProps) {
   const activeRegistrations = registrations.filter((r) => !r.withdrawn);
@@ -136,6 +138,7 @@ export function RegistrationTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {onCheckIn && <TableHead className="w-20">Check-In</TableHead>}
             <TableHead>Name</TableHead>
             <TableHead>Rank</TableHead>
             <TableHead>Club</TableHead>
@@ -155,6 +158,17 @@ export function RegistrationTable({
 
             return (
               <TableRow key={playerId}>
+                {onCheckIn && (
+                  <TableCell>
+                    <Checkbox
+                      checked={reg.checkedIn}
+                      onCheckedChange={(checked) =>
+                        onCheckIn(playerId, checked === true)
+                      }
+                      aria-label={`Check in ${typeof player === 'string' ? playerId : player.name}`}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-medium">
                   {typeof player === 'string' ? playerId : player.name}
                 </TableCell>

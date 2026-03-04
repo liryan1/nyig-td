@@ -207,6 +207,7 @@ export class TournamentService {
           roundsParticipating,
           registeredAt: new Date(),
           withdrawn: false,
+          checkedIn: false,
         },
       ];
     }
@@ -284,6 +285,7 @@ export class TournamentService {
         roundsParticipating: [],
         registeredAt: new Date(),
         withdrawn: false,
+        checkedIn: false,
       });
       registeredPlayerIds.add(dbPlayer.id);
     }
@@ -592,6 +594,7 @@ export class TournamentService {
     const activeRegistrations: { playerId: string; divisionId?: string | null }[] = [];
     for (const reg of tournament.registrations) {
       if (reg.withdrawn) continue;
+      if (!reg.checkedIn) continue;
       if (alreadyPairedIds.has(reg.playerId)) continue;
       const participates =
         reg.roundsParticipating.length === 0 || reg.roundsParticipating.includes(roundNumber);
@@ -921,6 +924,72 @@ export class TournamentService {
         playerId: (playerMap.get(r.playerId) ?? r.playerId) as string,
       })),
     };
+  }
+
+  // ====== Check-In ======
+
+  async checkInPlayer(tournamentId: string, playerId: string, checkedIn: boolean) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    const reg = tournament.registrations.find((r) => r.playerId === playerId);
+    if (!reg) return null;
+    if (reg.withdrawn) {
+      throw new Error('Cannot check in a withdrawn player');
+    }
+
+    const registrations = tournament.registrations.map((r) =>
+      r.playerId === playerId ? { ...r, checkedIn } : r
+    );
+
+    return prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { registrations },
+    });
+  }
+
+  async bulkCheckInPlayers(tournamentId: string, playerIds: string[]) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    const playerIdSet = new Set(playerIds);
+    const registrations = tournament.registrations.map((r) =>
+      playerIdSet.has(r.playerId) && !r.withdrawn ? { ...r, checkedIn: true } : r
+    );
+
+    return prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { registrations },
+    });
+  }
+
+  async selfCheckIn(tournamentId: string, playerId: string) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    const reg = tournament.registrations.find((r) => r.playerId === playerId);
+    if (!reg) return null;
+    if (reg.withdrawn) {
+      throw new Error('Cannot check in a withdrawn player');
+    }
+
+    if (reg.checkedIn) {
+      // Already checked in — fetch player name and return
+      const player = await prisma.player.findUnique({ where: { id: playerId } });
+      return { playerName: player?.name ?? 'Unknown', checkedIn: true };
+    }
+
+    const registrations = tournament.registrations.map((r) =>
+      r.playerId === playerId ? { ...r, checkedIn: true } : r
+    );
+
+    await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { registrations },
+    });
+
+    const player = await prisma.player.findUnique({ where: { id: playerId } });
+    return { playerName: player?.name ?? 'Unknown', checkedIn: true };
   }
 }
 
