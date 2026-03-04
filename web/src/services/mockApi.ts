@@ -600,7 +600,6 @@ function updateStandings(tournament: Tournament) {
 
 export async function getStandings(
   tournamentId: string,
-  _throughRound?: number
 ): Promise<PlayerStanding[]> {
   await delay();
   return standings[tournamentId] ?? [];
@@ -609,7 +608,6 @@ export async function getStandings(
 export async function getDivisionStandings(
   tournamentId: string,
   divisionId: string,
-  _throughRound?: number
 ): Promise<PlayerStanding[]> {
   await delay();
   const tournament = tournaments.find((t) => t._id === tournamentId);

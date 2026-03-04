@@ -1,4 +1,4 @@
-# pairing-api
+# Pairing API
 
 Stateless FastAPI service for Go tournament management. Wraps the lib (nyig-td) Python package to expose tournament functionality via REST endpoints.
 

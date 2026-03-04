@@ -87,13 +87,13 @@ uv run python examples/swiss_tournament.py
 
 ## Module Quick Reference
 
-| Module | Key Classes | Purpose |
-|--------|-------------|---------|
-| ranks.py | `Rank`, `RankType` | Rank parsing, comparison, arithmetic |
-| handicap.py | `Handicap`, `HandicapCalculator` | Calculate stones and komi |
-| models.py | `Player`, `Tournament`, `Pairing`, `Round` | Data structures |
-| pairing.py | `SwissPairingEngine`, `McMahonPairingEngine` | Generate pairings |
-| standings.py | `StandingsCalculator`, `PlayerStanding` | Calculate rankings |
+| Module       | Key Classes                                  | Purpose                              |
+| ------------ | -------------------------------------------- | ------------------------------------ |
+| ranks.py     | `Rank`, `RankType`                           | Rank parsing, comparison, arithmetic |
+| handicap.py  | `Handicap`, `HandicapCalculator`             | Calculate stones and komi            |
+| models.py    | `Player`, `Tournament`, `Pairing`, `Round`   | Data structures                      |
+| pairing.py   | `SwissPairingEngine`, `McMahonPairingEngine` | Generate pairings                    |
+| standings.py | `StandingsCalculator`, `PlayerStanding`      | Calculate rankings                   |
 
 ## Testing
 

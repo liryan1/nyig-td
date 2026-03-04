@@ -1,4 +1,4 @@
-# td-api
+# NYIG TD Backend
 
 A TypeScript REST API for managing Go (Baduk/Weiqi) tournament operations including player registration, Swiss/McMahon pairings, and standings calculation.
 

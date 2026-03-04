@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen, within } from '../../utils';
+import { render, screen } from '../../utils';
 import { RoundManager } from '@/components/tournament/RoundManager';
 import type { Tournament, Player } from '@/types';
 

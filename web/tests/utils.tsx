@@ -13,21 +13,18 @@ const createTestQueryClient = () =>
     },
   });
 
-interface WrapperProps {
-  children: React.ReactNode;
-}
-
-function AllTheProviders({ children }: WrapperProps) {
-  const queryClient = createTestQueryClient();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
-    </QueryClientProvider>
-  );
-}
-
 const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) =>
-  render(ui, { wrapper: AllTheProviders, ...options });
+  render(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => {
+      const queryClient = createTestQueryClient();
+      return (
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>{children}</BrowserRouter>
+        </QueryClientProvider>
+      );
+    },
+    ...options,
+  });
 
-export * from '@testing-library/react';
+export { screen, waitFor, within } from '@testing-library/react';
 export { customRender as render };

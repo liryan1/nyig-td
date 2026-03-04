@@ -1,4 +1,4 @@
-# lib
+# TD Library
 
 Tournament director tools for US Go tournaments. A Python library for managing Go tournament pairings, handicaps, and standings using Swiss and McMahon systems.
 
@@ -361,39 +361,39 @@ python examples/swiss_tournament.py
 
 ### Main Classes
 
-| Class | Description |
-|-------|-------------|
-| `Rank` | Go rank representation (kyu/dan) |
-| `Player` | Tournament participant |
-| `Tournament` | Full tournament state |
-| `TournamentSettings` | Tournament configuration |
-| `Pairing` | A game pairing between two players |
-| `Round` | A tournament round with pairings and byes |
+| Class                | Description                               |
+| -------------------- | ----------------------------------------- |
+| `Rank`               | Go rank representation (kyu/dan)          |
+| `Player`             | Tournament participant                    |
+| `Tournament`         | Full tournament state                     |
+| `TournamentSettings` | Tournament configuration                  |
+| `Pairing`            | A game pairing between two players        |
+| `Round`              | A tournament round with pairings and byes |
 
 ### Pairing Engines
 
-| Class | Description |
-|-------|-------------|
-| `SwissPairingEngine` | Swiss system pairing |
+| Class                  | Description            |
+| ---------------------- | ---------------------- |
+| `SwissPairingEngine`   | Swiss system pairing   |
 | `McMahonPairingEngine` | McMahon system pairing |
-| `get_pairing_engine()` | Factory function |
+| `get_pairing_engine()` | Factory function       |
 
 ### Calculators
 
-| Class | Description |
-|-------|-------------|
-| `HandicapCalculator` | Calculate handicap stones and komi |
-| `StandingsCalculator` | Calculate tournament standings |
+| Class                 | Description                        |
+| --------------------- | ---------------------------------- |
+| `HandicapCalculator`  | Calculate handicap stones and komi |
+| `StandingsCalculator` | Calculate tournament standings     |
 
 ### Enums
 
-| Enum | Values |
-|------|--------|
-| `RankType` | `KYU`, `DAN` |
-| `GameResult` | `BLACK_WIN`, `WHITE_WIN`, `DRAW`, `NO_RESULT`, `BLACK_WIN_FORFEIT`, `WHITE_WIN_FORFEIT`, `BOTH_LOSE` |
-| `RoundStatus` | `PENDING`, `PAIRED`, `IN_PROGRESS`, `COMPLETED` |
-| `PairingAlgorithm` | `SWISS`, `MCMAHON` |
-| `TournamentStatus` | `SETUP`, `REGISTRATION`, `IN_PROGRESS`, `COMPLETED` |
+| Enum               | Values                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `RankType`         | `KYU`, `DAN`                                                                                         |
+| `GameResult`       | `BLACK_WIN`, `WHITE_WIN`, `DRAW`, `NO_RESULT`, `BLACK_WIN_FORFEIT`, `WHITE_WIN_FORFEIT`, `BOTH_LOSE` |
+| `RoundStatus`      | `PENDING`, `PAIRED`, `IN_PROGRESS`, `COMPLETED`                                                      |
+| `PairingAlgorithm` | `SWISS`, `MCMAHON`                                                                                   |
+| `TournamentStatus` | `SETUP`, `REGISTRATION`, `IN_PROGRESS`, `COMPLETED`                                                  |
 
 ## Requirements
 

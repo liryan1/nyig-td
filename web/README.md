@@ -1,4 +1,4 @@
-# web
+# NYIG TD Web App
 
 React frontend for managing Go (board game) tournaments. Provides tournament creation, player registration, pairing management, and standings display.
 

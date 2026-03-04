@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -65,7 +65,7 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
     },
   });
 
-  const algorithm = form.watch('settings.pairingAlgorithm');
+  const algorithm = useWatch({ control: form.control, name: 'settings.pairingAlgorithm' });
 
   const handleSubmit = (data: FormData) => {
     onSubmit(data as CreateTournamentForm);
