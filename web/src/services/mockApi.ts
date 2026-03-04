@@ -115,14 +115,8 @@ export async function createTournament(data: CreateTournamentForm): Promise<Tour
     settings: {
       numRounds: data.settings.numRounds,
       pairingAlgorithm: data.settings.pairingAlgorithm,
-      standingsWeights: {
-        wins: data.settings.standingsWeights?.wins ?? 1.0,
-        sos: data.settings.standingsWeights?.sos ?? 0.5,
-        sodos: data.settings.standingsWeights?.sodos ?? 0.25,
-        extendedSos: data.settings.standingsWeights?.extendedSos ?? 0.1,
-      },
-      handicapEnabled: data.settings.handicapEnabled,
-      handicapReduction: data.settings.handicapReduction,
+      handicapType: data.settings.handicapType,
+      handicapModifier: data.settings.handicapModifier,
       mcmahonBar: data.settings.mcmahonBar,
       crossDivisionPairing: data.settings.crossDivisionPairing ?? true,
     },
@@ -573,8 +567,6 @@ function updateStandings(tournament: Tournament) {
   for (const [playerId, stats] of Object.entries(playerStats)) {
     const player = players.find((p) => p._id === playerId);
     const sosValue = sos[playerId] ?? 0;
-    const totalScore = stats.wins + sosValue * 0.5;
-
     standingsList.push({
       rank: 0,
       playerId,
@@ -583,14 +575,13 @@ function updateStandings(tournament: Tournament) {
       wins: stats.wins,
       losses: stats.losses,
       sos: sosValue,
-      sodos: 0,
-      extendedSos: 0,
-      totalScore,
+      sds: 0,
+      sosos: 0,
     });
   }
 
-  // Sort and assign ranks
-  standingsList.sort((a, b) => b.totalScore - a.totalScore);
+  // Sort by wins, then SOS
+  standingsList.sort((a, b) => b.wins - a.wins || b.sos - a.sos);
   standingsList.forEach((s, i) => (s.rank = i + 1));
 
   standings[tournament._id] = standingsList;

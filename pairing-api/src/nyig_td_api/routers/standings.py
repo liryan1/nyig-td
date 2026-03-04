@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from nyig_td import (
     Tournament, TournamentSettings, Player, Round, Pairing, Bye,
     GameResult, RoundStatus,
-    StandingsCalculator, StandingsWeights, Rank
+    StandingsCalculator, Rank
 )
 
 from ..schemas import (
@@ -35,8 +35,8 @@ async def calculate_standings(request: StandingsRequest) -> StandingsResponse:
     """
     Calculate tournament standings.
 
-    Provide all player and round data. Returns standings with
-    configurable tiebreaker weights.
+    Provide all player and round data. Returns standings sorted by
+    Wins -> SOS -> SDS -> SOSOS.
     """
     try:
         # Build tournament
@@ -84,13 +84,7 @@ async def calculate_standings(request: StandingsRequest) -> StandingsResponse:
             round_.status = RoundStatus.COMPLETED
 
         # Calculate standings
-        weights = StandingsWeights(
-            wins=request.weights.wins,
-            sos=request.weights.sos,
-            sodos=request.weights.sodos,
-            extended_sos=request.weights.extended_sos,
-        )
-        calculator = StandingsCalculator(weights=weights)
+        calculator = StandingsCalculator()
 
         standings = calculator.calculate(
             tournament,
@@ -107,9 +101,8 @@ async def calculate_standings(request: StandingsRequest) -> StandingsResponse:
                 wins=s.wins,
                 losses=s.losses,
                 sos=s.sos,
-                sodos=s.sodos,
-                extended_sos=s.extended_sos,
-                total_score=s.total_score,
+                sds=s.sds,
+                sosos=s.sosos,
             )
             for s in standings
         ]

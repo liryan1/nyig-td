@@ -23,6 +23,17 @@ class GameResultEnum(str, Enum):
     BOTH_LOSE = "BL"
 
 
+class HandicapTypeEnum(str, Enum):
+    NONE = "none"
+    RANK_DIFFERENCE = "rank_difference"
+
+
+class HandicapModifierEnum(str, Enum):
+    NONE = "none"
+    MINUS_1 = "minus_1"
+    MINUS_2 = "minus_2"
+
+
 # ============ Player Schemas ============
 
 class PlayerInput(BaseModel):
@@ -88,8 +99,8 @@ class PairingRequest(BaseModel):
     round_number: int = Field(..., ge=1)
     algorithm: PairingAlgorithmEnum = PairingAlgorithmEnum.MCMAHON
     mcmahon_bar: Optional[str] = Field(None, pattern=r"^\d+[kdKD]$")
-    handicap_enabled: bool = True
-    handicap_reduction: int = Field(0, ge=0, le=5)
+    handicap_type: HandicapTypeEnum = HandicapTypeEnum.RANK_DIFFERENCE
+    handicap_modifier: HandicapModifierEnum = HandicapModifierEnum.NONE
 
 
 class PairingResponse(BaseModel):
@@ -101,19 +112,10 @@ class PairingResponse(BaseModel):
 
 # ============ Standings Schemas ============
 
-class StandingsWeightsInput(BaseModel):
-    """Configurable weights for standings."""
-    wins: float = Field(1.0, ge=0)
-    sos: float = Field(0.1, ge=0)
-    sodos: float = Field(0.05, ge=0)
-    extended_sos: float = Field(0.0, ge=0)
-
-
 class StandingsRequest(BaseModel):
     """Request to calculate standings."""
     players: list[PlayerInput]
     rounds: list[RoundInput]
-    weights: StandingsWeightsInput = Field(default_factory=lambda: StandingsWeightsInput())
     through_round: Optional[int] = Field(None, ge=1)
 
 
@@ -126,9 +128,8 @@ class PlayerStandingOutput(BaseModel):
     wins: float
     losses: float
     sos: float
-    sodos: float
-    extended_sos: float
-    total_score: float
+    sds: float
+    sosos: float
 
 
 class StandingsResponse(BaseModel):
@@ -142,7 +143,8 @@ class HandicapRequest(BaseModel):
     """Request to calculate handicap for a game."""
     white_rank: str = Field(..., pattern=r"^\d+[kdKD]$")
     black_rank: str = Field(..., pattern=r"^\d+[kdKD]$")
-    reduction: int = Field(0, ge=0, le=5)
+    handicap_type: HandicapTypeEnum = HandicapTypeEnum.RANK_DIFFERENCE
+    handicap_modifier: HandicapModifierEnum = HandicapModifierEnum.NONE
 
 
 class HandicapResponse(BaseModel):

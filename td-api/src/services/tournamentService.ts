@@ -27,9 +27,8 @@ export class TournamentService {
         settings: {
           numRounds: data.settings.numRounds,
           pairingAlgorithm: data.settings.pairingAlgorithm,
-          standingsWeights: data.settings.standingsWeights,
-          handicapEnabled: data.settings.handicapEnabled,
-          handicapReduction: data.settings.handicapReduction,
+          handicapType: data.settings.handicapType,
+          handicapModifier: data.settings.handicapModifier,
           mcmahonBar: data.settings.mcmahonBar,
           crossDivisionPairing: data.settings.crossDivisionPairing,
         },
@@ -77,9 +76,6 @@ export class TournamentService {
       data.settings = {
         ...tournament.settings,
         ...updates.settings,
-        standingsWeights: updates.settings.standingsWeights
-          ? { ...tournament.settings.standingsWeights, ...updates.settings.standingsWeights }
-          : tournament.settings.standingsWeights,
       };
     }
 
@@ -366,7 +362,7 @@ export class TournamentService {
     let handicapStones = 0;
     let komi = 7.5;
 
-    if (tournament.settings.handicapEnabled) {
+    if (tournament.settings.handicapType !== 'none') {
       // Determine which player is weaker (plays black) based on rank
       // Rank format: "5k" or "3d" — kyu players are weaker than dan players
       // Among kyu, higher number = weaker; among dan, higher number = stronger
@@ -394,7 +390,8 @@ export class TournamentService {
       const handicapResult = await nyigTdClient.calculateHandicap(
         whitePlayer.rank,
         blackPlayer.rank,
-        tournament.settings.handicapReduction
+        tournament.settings.handicapType,
+        tournament.settings.handicapModifier
       );
       handicapStones = handicapResult.stones;
       komi = handicapResult.komi;
@@ -547,8 +544,8 @@ export class TournamentService {
           round_number: roundNumber,
           algorithm: tournament.settings.pairingAlgorithm,
           mcmahon_bar: tournament.settings.mcmahonBar ?? undefined,
-          handicap_enabled: tournament.settings.handicapEnabled,
-          handicap_reduction: tournament.settings.handicapReduction,
+          handicap_type: tournament.settings.handicapType,
+          handicap_modifier: tournament.settings.handicapModifier,
         });
 
         const divPairings: PairingResult[] = response.pairings.map((p) => ({
@@ -589,8 +586,8 @@ export class TournamentService {
         round_number: roundNumber,
         algorithm: tournament.settings.pairingAlgorithm,
         mcmahon_bar: tournament.settings.mcmahonBar ?? undefined,
-        handicap_enabled: tournament.settings.handicapEnabled,
-        handicap_reduction: tournament.settings.handicapReduction,
+        handicap_type: tournament.settings.handicapType,
+        handicap_modifier: tournament.settings.handicapModifier,
       });
 
       newPairings = response.pairings.map((p) => ({
@@ -745,12 +742,6 @@ export class TournamentService {
         rank: p.rank,
       })),
       rounds: completedRounds,
-      weights: {
-        wins: tournament.settings.standingsWeights.wins,
-        sos: tournament.settings.standingsWeights.sos,
-        sodos: tournament.settings.standingsWeights.sodos,
-        extended_sos: tournament.settings.standingsWeights.extendedSos,
-      },
       through_round: throughRound,
     });
 
@@ -762,9 +753,8 @@ export class TournamentService {
       wins: s.wins,
       losses: s.losses,
       sos: s.sos,
-      sodos: s.sodos,
-      extendedSos: s.extended_sos,
-      totalScore: s.total_score,
+      sds: s.sds,
+      sosos: s.sosos,
     }));
   }
 }

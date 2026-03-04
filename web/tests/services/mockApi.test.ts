@@ -151,8 +151,8 @@ describe('createTournament', () => {
       settings: {
         numRounds: 3,
         pairingAlgorithm: 'swiss',
-        handicapEnabled: false,
-        handicapReduction: 0,
+        handicapType: 'none',
+        handicapModifier: 'none',
         crossDivisionPairing: true,
       },
     });
@@ -173,8 +173,8 @@ describe('createTournament', () => {
       settings: {
         numRounds: 2,
         pairingAlgorithm: 'swiss',
-        handicapEnabled: false,
-        handicapReduction: 0,
+        handicapType: 'none',
+        handicapModifier: 'none',
         crossDivisionPairing: undefined as unknown as boolean,
       },
     });

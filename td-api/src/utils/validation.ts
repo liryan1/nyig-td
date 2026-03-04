@@ -13,24 +13,11 @@ export const createPlayerSchema = z.object({
 
 export const updatePlayerSchema = createPlayerSchema.partial();
 
-export const standingsWeightsSchema = z.object({
-  wins: z.number().min(0).default(1.0),
-  sos: z.number().min(0).default(0.1),
-  sodos: z.number().min(0).default(0.05),
-  extendedSos: z.number().min(0).default(0.0),
-});
-
 export const tournamentSettingsSchema = z.object({
   numRounds: z.number().int().min(1).max(10),
   pairingAlgorithm: z.enum(['swiss', 'mcmahon']).default('mcmahon'),
-  standingsWeights: standingsWeightsSchema.default({
-    wins: 1.0,
-    sos: 0.1,
-    sodos: 0.05,
-    extendedSos: 0.0,
-  }),
-  handicapEnabled: z.boolean().default(true),
-  handicapReduction: z.number().int().min(0).max(5).default(0),
+  handicapType: z.enum(['none', 'rank_difference']).default('rank_difference'),
+  handicapModifier: z.enum(['none', 'minus_1', 'minus_2']).default('none'),
   mcmahonBar: rankSchema.optional(),
   crossDivisionPairing: z.boolean().default(true),
 });

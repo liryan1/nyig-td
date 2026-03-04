@@ -122,7 +122,7 @@ class TestSwissApiWithDivisions:
                 "previous_rounds": previous_rounds,
                 "round_number": round_num,
                 "algorithm": "swiss",
-                "handicap_enabled": True,
+                "handicap_type": "rank_difference",
             }
 
             response = await client.post("/pair", json=pairing_request)
@@ -182,7 +182,7 @@ class TestSwissApiWithDivisions:
             "previous_rounds": [],
             "round_number": 1,
             "algorithm": "swiss",
-            "handicap_enabled": True,
+            "handicap_type": "rank_difference",
         }
 
         response = await client.post("/pair", json=pairing_request)
@@ -225,7 +225,7 @@ class TestMcMahonApiWithDivisions:
                 "round_number": round_num,
                 "algorithm": "mcmahon",
                 "mcmahon_bar": "2d",
-                "handicap_enabled": True,
+                "handicap_type": "rank_difference",
             }
 
             response = await client.post("/pair", json=pairing_request)
@@ -479,7 +479,7 @@ class TestApiEdgeCases:
         # All standings should have SOS calculated
         for s in standings:
             assert "sos" in s
-            assert "sodos" in s
+            assert "sds" in s
 
     @pytest.mark.anyio
     async def test_bye_distribution_fairness(self, client: AsyncClient) -> None:

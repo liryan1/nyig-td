@@ -157,17 +157,17 @@ class PairingAlgorithm(Enum):
     MCMAHON = "mcmahon"
 
 
-@dataclass
-class StandingsWeights:
-    """Configurable weights for standings calculation."""
-    wins: float = 1.0
-    sos: float = 0.1  # Sum of Opponents' Scores
-    sodos: float = 0.05  # Sum of Defeated Opponents' Scores
-    extended_sos: float = 0.0  # SOS of opponents
+class HandicapType(Enum):
+    """Type of handicap calculation."""
+    NONE = "none"
+    RANK_DIFFERENCE = "rank_difference"
 
-    @classmethod
-    def default(cls) -> StandingsWeights:
-        return cls()
+
+class HandicapModifier(Enum):
+    """Modifier applied to handicap calculation."""
+    NONE = "none"
+    MINUS_1 = "minus_1"
+    MINUS_2 = "minus_2"
 
 
 @dataclass
@@ -175,9 +175,8 @@ class TournamentSettings:
     """Tournament configuration."""
     num_rounds: int
     pairing_algorithm: PairingAlgorithm = PairingAlgorithm.MCMAHON
-    standings_weights: StandingsWeights = field(default_factory=StandingsWeights.default)
-    handicap_enabled: bool = True
-    handicap_reduction: int = 0  # Reduce handicap by this amount
+    handicap_type: HandicapType = HandicapType.RANK_DIFFERENCE
+    handicap_modifier: HandicapModifier = HandicapModifier.NONE
     mcmahon_bar: Optional[str] = None  # Rank string for McMahon bar (e.g., "3d")
 
     def __post_init__(self) -> None:

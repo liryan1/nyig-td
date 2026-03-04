@@ -48,9 +48,8 @@ function createTournamentData(overrides = {}) {
     settings: {
       numRounds: 4,
       pairingAlgorithm: 'mcmahon',
-      standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-      handicapEnabled: true,
-      handicapReduction: 0,
+      handicapType: 'rank_difference',
+      handicapModifier: 'none',
       mcmahonBar: null,
       crossDivisionPairing: true,
     },
@@ -104,9 +103,8 @@ describe('TournamentService', () => {
         settings: {
           numRounds: 4,
           pairingAlgorithm: 'mcmahon',
-          standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-          handicapEnabled: true,
-          handicapReduction: 0,
+          handicapType: 'rank_difference',
+          handicapModifier: 'none',
           crossDivisionPairing: true,
         },
       });
@@ -120,9 +118,8 @@ describe('TournamentService', () => {
         settings: {
           numRounds: 3,
           pairingAlgorithm: 'mcmahon',
-          standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-          handicapEnabled: true,
-          handicapReduction: 1,
+          handicapType: 'rank_difference',
+          handicapModifier: 'minus_1',
           mcmahonBar: '1d',
         },
       });
@@ -134,16 +131,15 @@ describe('TournamentService', () => {
         settings: {
           numRounds: 3,
           pairingAlgorithm: 'mcmahon',
-          standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-          handicapEnabled: true,
-          handicapReduction: 1,
+          handicapType: 'rank_difference',
+          handicapModifier: 'minus_1',
           mcmahonBar: '1d',
           crossDivisionPairing: true,
         },
       });
 
       expect(result.settings.mcmahonBar).toBe('1d');
-      expect(result.settings.handicapReduction).toBe(1);
+      expect(result.settings.handicapModifier).toBe('minus_1');
     });
   });
 
@@ -238,32 +234,32 @@ describe('TournamentService', () => {
       mockTournamentFindUnique.mockResolvedValue(tournament);
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
-        settings: { ...tournament.settings, handicapEnabled: false },
+        settings: { ...tournament.settings, handicapType: 'none' },
       });
 
       const result = await service.update('507f1f77bcf86cd799439011', {
-        settings: { handicapEnabled: false },
+        settings: { handicapType: 'none' },
       });
 
-      expect(result?.settings.handicapEnabled).toBe(false);
+      expect(result?.settings.handicapType).toBe('none');
     });
 
-    it('should update standings weights partially', async () => {
+    it('should update handicap modifier', async () => {
       const tournament = createTournamentData();
       mockTournamentFindUnique.mockResolvedValue(tournament);
       mockTournamentUpdate.mockResolvedValue({
         ...tournament,
         settings: {
           ...tournament.settings,
-          standingsWeights: { ...tournament.settings.standingsWeights, wins: 2.0 },
+          handicapModifier: 'minus_1',
         },
       });
 
       const result = await service.update('507f1f77bcf86cd799439011', {
-        settings: { standingsWeights: { wins: 2.0, sos: 1.0, sodos: 0.5, extendedSos: 0.0 } },
+        settings: { handicapModifier: 'minus_1' },
       });
 
-      expect(result?.settings.standingsWeights.wins).toBe(2.0);
+      expect(result?.settings.handicapModifier).toBe('minus_1');
     });
 
     it('should return null for non-existent tournament', async () => {
@@ -849,9 +845,8 @@ describe('TournamentService', () => {
           settings: {
             numRounds: 4,
             pairingAlgorithm: 'mcmahon',
-            standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-            handicapEnabled: true,
-            handicapReduction: 0,
+            handicapType: 'rank_difference',
+            handicapModifier: 'none',
             mcmahonBar: '1d',
           },
           registrations: [
@@ -889,9 +884,8 @@ describe('TournamentService', () => {
           settings: {
             numRounds: 4,
             pairingAlgorithm: 'swiss',
-            standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-            handicapEnabled: false,
-            handicapReduction: 0,
+            handicapType: 'none',
+            handicapModifier: 'none',
           },
           registrations: [
             { playerId: 'p1', roundsParticipating: [], withdrawn: false },
@@ -918,7 +912,7 @@ describe('TournamentService', () => {
         expect(mockGeneratePairings).toHaveBeenCalledWith(
           expect.objectContaining({
             algorithm: 'swiss',
-            handicap_enabled: false,
+            handicap_type: 'none',
           })
         );
       });
@@ -1173,9 +1167,8 @@ describe('TournamentService', () => {
               wins: 1,
               losses: 0,
               sos: 0,
-              sodos: 0,
-              extended_sos: 0,
-              total_score: 1.0,
+              sds: 0,
+              sosos: 0,
             },
             {
               rank: 2,
@@ -1185,9 +1178,8 @@ describe('TournamentService', () => {
               wins: 0,
               losses: 1,
               sos: 1,
-              sodos: 0,
-              extended_sos: 0,
-              total_score: 0.1,
+              sds: 0,
+              sosos: 0,
             },
           ],
         });
@@ -1243,10 +1235,10 @@ describe('TournamentService', () => {
         mockPlayerFindMany.mockResolvedValue(players);
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 2, losses: 0, sos: 1.0, sodos: 0, extended_sos: 0, total_score: 2.1 },
-            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 1, losses: 1, sos: 2.0, sodos: 1, extended_sos: 0, total_score: 1.25 },
-            { rank: 3, player_id: 'p2', player_name: 'Bob', player_rank: '4k', wins: 1, losses: 1, sos: 1.0, sodos: 0, extended_sos: 0, total_score: 1.1 },
-            { rank: 4, player_id: 'p4', player_name: 'Diana', player_rank: '2k', wins: 0, losses: 2, sos: 2.0, sodos: 0, extended_sos: 0, total_score: 0.2 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 2, losses: 0, sos: 1.0, sds: 0, sosos: 0 },
+            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 1, losses: 1, sos: 2.0, sds: 1, sosos: 0 },
+            { rank: 3, player_id: 'p2', player_name: 'Bob', player_rank: '4k', wins: 1, losses: 1, sos: 1.0, sds: 0, sosos: 0 },
+            { rank: 4, player_id: 'p4', player_name: 'Diana', player_rank: '2k', wins: 0, losses: 2, sos: 2.0, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1302,8 +1294,8 @@ describe('TournamentService', () => {
         mockPlayerFindMany.mockResolvedValue(players);
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 1, sos: 1.0, sodos: 0, extended_sos: 0, total_score: 1.1 },
-            { rank: 2, player_id: 'p2', player_name: 'Bob', player_rank: '5k', wins: 1, losses: 1, sos: 1.0, sodos: 0, extended_sos: 0, total_score: 1.1 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 1, sos: 1.0, sds: 0, sosos: 0 },
+            { rank: 2, player_id: 'p2', player_name: 'Bob', player_rank: '5k', wins: 1, losses: 1, sos: 1.0, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1349,8 +1341,8 @@ describe('TournamentService', () => {
         mockPlayerFindMany.mockResolvedValue(players);
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 0, sos: 0, sodos: 0, extended_sos: 0, total_score: 1.0 },
-            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 0, losses: 1, sos: 1, sodos: 0, extended_sos: 0, total_score: 0.1 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 0, sos: 0, sds: 0, sosos: 0 },
+            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 0, losses: 1, sos: 1, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1390,9 +1382,9 @@ describe('TournamentService', () => {
         mockPlayerFindMany.mockResolvedValue(players);
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 0, sos: 0.75, sodos: 0, extended_sos: 0, total_score: 1.075 },
-            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 0.75, losses: 0, sos: 0, sodos: 0, extended_sos: 0, total_score: 0.75 },
-            { rank: 3, player_id: 'p2', player_name: 'Bob', player_rank: '4k', wins: 0, losses: 1, sos: 1, sodos: 0, extended_sos: 0, total_score: 0.1 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 1, losses: 0, sos: 0.75, sds: 0, sosos: 0 },
+            { rank: 2, player_id: 'p3', player_name: 'Charlie', player_rank: '3k', wins: 0.75, losses: 0, sos: 0, sds: 0, sosos: 0 },
+            { rank: 3, player_id: 'p2', player_name: 'Bob', player_rank: '4k', wins: 0, losses: 1, sos: 1, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1410,16 +1402,9 @@ describe('TournamentService', () => {
       });
     });
 
-    describe('custom weights', () => {
-      it('should pass custom standings weights', async () => {
+    describe('standings request format', () => {
+      it('should call standings API without weights', async () => {
         const tournament = createTournamentData({
-          settings: {
-            numRounds: 4,
-            pairingAlgorithm: 'mcmahon',
-            standingsWeights: { wins: 2.0, sos: 0.5, sodos: 0.25, extendedSos: 0.1 },
-            handicapEnabled: true,
-            handicapReduction: 0,
-          },
           registrations: [{ playerId: 'p1', roundsParticipating: [], withdrawn: false }],
           rounds: [{ number: 1, status: 'completed', pairings: [], byes: [] }],
         });
@@ -1430,7 +1415,7 @@ describe('TournamentService', () => {
         mockPlayerFindMany.mockResolvedValue(players);
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 0, losses: 0, sos: 0, sodos: 0, extended_sos: 0, total_score: 0 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '5k', wins: 0, losses: 0, sos: 0, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1438,7 +1423,8 @@ describe('TournamentService', () => {
 
         expect(mockCalculateStandings).toHaveBeenCalledWith(
           expect.objectContaining({
-            weights: { wins: 2.0, sos: 0.5, sodos: 0.25, extended_sos: 0.1 },
+            players: expect.any(Array),
+            rounds: expect.any(Array),
           })
         );
       });
@@ -1485,8 +1471,8 @@ describe('TournamentService', () => {
 
         mockCalculateStandings.mockResolvedValue({
           standings: [
-            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '3d', wins: 1, losses: 0, sos: 0, sodos: 0, extended_sos: 0, total_score: 1.0 },
-            { rank: 2, player_id: 'p2', player_name: 'Bob', player_rank: '2d', wins: 0, losses: 0, sos: 0, sodos: 0, extended_sos: 0, total_score: 0.0 },
+            { rank: 1, player_id: 'p1', player_name: 'Alice', player_rank: '3d', wins: 1, losses: 0, sos: 0, sds: 0, sosos: 0 },
+            { rank: 2, player_id: 'p2', player_name: 'Bob', player_rank: '2d', wins: 0, losses: 0, sos: 0, sds: 0, sosos: 0 },
           ],
         });
 
@@ -1633,9 +1619,8 @@ describe('TournamentService', () => {
         settings: {
           numRounds: 4,
           pairingAlgorithm: 'swiss',
-          standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-          handicapEnabled: true,
-          handicapReduction: 0,
+          handicapType: 'rank_difference',
+          handicapModifier: 'none',
           mcmahonBar: null,
           crossDivisionPairing: false,
         },

@@ -3,7 +3,7 @@
 import pytest
 from nyig_td.models import (
     Tournament, TournamentSettings, Player, Round, Pairing,
-    GameResult, StandingsWeights, PairingAlgorithm,
+    GameResult, PairingAlgorithm,
     RoundStatus
 )
 from nyig_td.standings import StandingsCalculator, PlayerStanding
@@ -94,10 +94,8 @@ class TestStandingsCalculator:
         assert alice_standing.wins == 2.0
         assert alice_standing.sos == 2.0  # Bob has 1, Carol has 1
 
-    def test_custom_weights(self):
-        weights = StandingsWeights(wins=1.0, sos=0.5, sodos=0.0, extended_sos=0.0)
-        calc = StandingsCalculator(weights=weights)
-
+    def test_sds_calculation(self):
+        """Test SDS (Sum of Defeated opponents' Scores)."""
         settings = TournamentSettings(num_rounds=4)
         tournament = Tournament.create("Test", settings)
 
@@ -111,9 +109,9 @@ class TestStandingsCalculator:
         r1.pairings[0].result = GameResult.WHITE_WIN
         r1.status = RoundStatus.COMPLETED
 
+        calc = StandingsCalculator()
         standings = calc.calculate(tournament, through_round=1)
 
-        # Alice: 1 win, SOS = 0 (bob has 0 wins)
-        # Total = 1.0 * 1 + 0.5 * 0 = 1.0
+        # Alice beat Bob (0 wins), so SDS = 0
         alice_standing = next(s for s in standings if s.player.id == alice.id)
-        assert alice_standing.total_score == 1.0
+        assert alice_standing.sds == 0.0

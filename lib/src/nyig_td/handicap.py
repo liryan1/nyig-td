@@ -1,7 +1,18 @@
 """Handicap calculation for Go games."""
 
 from dataclasses import dataclass
+from .models import HandicapModifier
 from .ranks import Rank
+
+
+def modifier_to_reduction(modifier: HandicapModifier) -> int:
+    """Convert a HandicapModifier enum to an integer reduction value."""
+    mapping = {
+        HandicapModifier.NONE: 0,
+        HandicapModifier.MINUS_1: 1,
+        HandicapModifier.MINUS_2: 2,
+    }
+    return mapping[modifier]
 
 
 @dataclass(frozen=True)

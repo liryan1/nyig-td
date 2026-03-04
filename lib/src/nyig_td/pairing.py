@@ -7,9 +7,9 @@ import random
 
 from .models import (
     Player, Pairing, Bye, Tournament,
-    GameResult, PairingAlgorithm
+    GameResult, PairingAlgorithm, HandicapType
 )
-from .handicap import HandicapCalculator
+from .handicap import HandicapCalculator, modifier_to_reduction
 from .ranks import Rank
 
 
@@ -109,7 +109,7 @@ class PairingEngine(ABC):
         # Check rank difference
         rank_diff = player1.rank.difference(player2.rank)
 
-        if abs(rank_diff) >= 2 and tournament.settings.handicap_enabled:
+        if abs(rank_diff) >= 2 and tournament.settings.handicap_type != HandicapType.NONE:
             # Significant rank difference - stronger plays white
             if rank_diff > 0:
                 return (player2, player1)  # player1 is stronger, plays white
@@ -148,7 +148,7 @@ class SwissPairingEngine(PairingEngine):
     ) -> PairingResult:
         warnings: list[str] = []
         handicap_calc = HandicapCalculator(
-            reduction=tournament.settings.handicap_reduction
+            reduction=modifier_to_reduction(tournament.settings.handicap_modifier)
         )
 
         # Get active players for this round
@@ -206,7 +206,7 @@ class SwissPairingEngine(PairingEngine):
             )
 
             # Calculate handicap
-            if tournament.settings.handicap_enabled:
+            if tournament.settings.handicap_type != HandicapType.NONE:
                 handicap = handicap_calc.calculate(white.rank, black.rank)
             else:
                 handicap = handicap_calc.calculate(white.rank, white.rank)  # Even
@@ -276,7 +276,7 @@ class McMahonPairingEngine(PairingEngine):
     ) -> PairingResult:
         warnings: list[str] = []
         handicap_calc = HandicapCalculator(
-            reduction=tournament.settings.handicap_reduction
+            reduction=modifier_to_reduction(tournament.settings.handicap_modifier)
         )
 
         # Update bar from settings if provided
@@ -348,7 +348,7 @@ class McMahonPairingEngine(PairingEngine):
             )
 
             # Calculate handicap
-            if tournament.settings.handicap_enabled:
+            if tournament.settings.handicap_type != HandicapType.NONE:
                 handicap = handicap_calc.calculate(white.rank, black.rank)
             else:
                 handicap = handicap_calc.calculate(white.rank, white.rank)

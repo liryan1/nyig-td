@@ -54,8 +54,8 @@ async def test_calculate_standings(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_custom_weights(client: AsyncClient) -> None:
-    """Test standings with custom weights."""
+async def test_standings_sds_field(client: AsyncClient) -> None:
+    """Test standings include SDS field."""
     request = {
         "players": [
             {"id": "1", "name": "Alice", "rank": "3d"},
@@ -69,12 +69,6 @@ async def test_custom_weights(client: AsyncClient) -> None:
                 ],
             }
         ],
-        "weights": {
-            "wins": 2.0,
-            "sos": 0.5,
-            "sodos": 0.0,
-            "extended_sos": 0.0,
-        },
     }
 
     response = await client.post("/standings", json=request)
@@ -82,8 +76,8 @@ async def test_custom_weights(client: AsyncClient) -> None:
 
     data = response.json()
     alice = next(s for s in data["standings"] if s["player_id"] == "1")
-    # 2.0 * 1 win = 2.0 base score
-    assert alice["total_score"] >= 2.0
+    assert "sds" in alice
+    assert alice["wins"] == 1.0
 
 
 @pytest.mark.anyio
@@ -458,7 +452,6 @@ async def test_sos_tiebreaker(client: AsyncClient) -> None:
     response = await client.post("/standings", json={
         "players": players,
         "rounds": rounds,
-        "weights": {"wins": 1.0, "sos": 0.1, "sodos": 0.0, "extended_sos": 0.0},
     })
     assert response.status_code == 200
     data = response.json()
@@ -473,8 +466,8 @@ async def test_sos_tiebreaker(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_sodos_tiebreaker(client: AsyncClient) -> None:
-    """Test SODOS (Sum of Defeated Opponents' Scores) tiebreaker."""
+async def test_sds_tiebreaker(client: AsyncClient) -> None:
+    """Test SDS (Sum of Defeated opponents' Scores) tiebreaker."""
     response = await client.post("/standings", json={
         "players": [
             {"id": "1", "name": "Alice", "rank": "3d"},
@@ -491,19 +484,18 @@ async def test_sodos_tiebreaker(client: AsyncClient) -> None:
                 ],
             },
         ],
-        "weights": {"wins": 1.0, "sos": 0.1, "sodos": 0.05, "extended_sos": 0.0},
     })
     assert response.status_code == 200
     data = response.json()
 
-    # Check that SODOS is calculated
+    # Check that SDS is calculated
     alice = next(s for s in data["standings"] if s["player_id"] == "1")
-    assert "sodos" in alice
+    assert "sds" in alice
 
 
 @pytest.mark.anyio
-async def test_extended_sos_tiebreaker(client: AsyncClient) -> None:
-    """Test extended SOS (sum of opponents' SOS) tiebreaker."""
+async def test_sosos_tiebreaker(client: AsyncClient) -> None:
+    """Test SOSOS (sum of opponents' SOS) tiebreaker."""
     response = await client.post("/standings", json={
         "players": [
             {"id": "1", "name": "Alice", "rank": "3d"},
@@ -527,14 +519,13 @@ async def test_extended_sos_tiebreaker(client: AsyncClient) -> None:
                 ],
             },
         ],
-        "weights": {"wins": 1.0, "sos": 0.1, "sodos": 0.05, "extended_sos": 0.01},
     })
     assert response.status_code == 200
     data = response.json()
 
     alice = next(s for s in data["standings"] if s["player_id"] == "1")
-    assert "extended_sos" in alice
-    assert alice["extended_sos"] >= 0
+    assert "sosos" in alice
+    assert alice["sosos"] >= 0
 
 
 @pytest.mark.anyio
@@ -556,8 +547,6 @@ async def test_ties_share_same_rank(client: AsyncClient) -> None:
                 ],
             },
         ],
-        # Use only wins weight for cleaner tie test
-        "weights": {"wins": 1.0, "sos": 0.0, "sodos": 0.0, "extended_sos": 0.0},
     })
     assert response.status_code == 200
     data = response.json()
@@ -811,9 +800,8 @@ async def test_standings_response_includes_all_fields(client: AsyncClient) -> No
     assert "wins" in standing
     assert "losses" in standing
     assert "sos" in standing
-    assert "sodos" in standing
-    assert "extended_sos" in standing
-    assert "total_score" in standing
+    assert "sds" in standing
+    assert "sosos" in standing
 
     # Verify player info
     alice = next(s for s in data["standings"] if s["player_id"] == "1")

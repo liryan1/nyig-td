@@ -5,12 +5,14 @@ from fastapi import APIRouter, HTTPException
 from nyig_td import (
     Tournament, TournamentSettings, Player, Round, Pairing, Bye,
     PairingAlgorithm, GameResult, RoundStatus,
+    HandicapType, HandicapModifier,
     get_pairing_engine, Rank
 )
 
 from ..schemas import (
     PairingRequest, PairingResponse, PairingOutput, ByeOutput,
-    PairingAlgorithmEnum, GameResultEnum
+    PairingAlgorithmEnum, GameResultEnum,
+    HandicapTypeEnum, HandicapModifierEnum
 )
 
 router = APIRouter()
@@ -39,11 +41,23 @@ def build_tournament(request: PairingRequest) -> Tournament:
         else PairingAlgorithm.SWISS
     )
 
+    handicap_type = (
+        HandicapType.RANK_DIFFERENCE
+        if request.handicap_type == HandicapTypeEnum.RANK_DIFFERENCE
+        else HandicapType.NONE
+    )
+    handicap_modifier_mapping = {
+        HandicapModifierEnum.NONE: HandicapModifier.NONE,
+        HandicapModifierEnum.MINUS_1: HandicapModifier.MINUS_1,
+        HandicapModifierEnum.MINUS_2: HandicapModifier.MINUS_2,
+    }
+    handicap_modifier = handicap_modifier_mapping[request.handicap_modifier]
+
     settings = TournamentSettings(
         num_rounds=request.round_number,  # At least this many rounds
         pairing_algorithm=algorithm,
-        handicap_enabled=request.handicap_enabled,
-        handicap_reduction=request.handicap_reduction,
+        handicap_type=handicap_type,
+        handicap_modifier=handicap_modifier,
         mcmahon_bar=request.mcmahon_bar,
     )
 

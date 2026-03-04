@@ -36,7 +36,7 @@ async def test_generate_swiss_pairings(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     }
 
     response = await client.post("/pair", json=request)
@@ -61,7 +61,7 @@ async def test_generate_mcmahon_pairings(client: AsyncClient) -> None:
         "round_number": 1,
         "algorithm": "mcmahon",
         "mcmahon_bar": "3d",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     }
 
     response = await client.post("/pair", json=request)
@@ -155,7 +155,7 @@ async def test_pairings_include_handicaps(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     }
 
     response = await client.post("/pair", json=request)
@@ -195,7 +195,7 @@ async def test_full_3_round_swiss_tournament(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert r1_response.status_code == 200
     r1_data = r1_response.json()
@@ -218,7 +218,7 @@ async def test_full_3_round_swiss_tournament(client: AsyncClient) -> None:
         "previous_rounds": [{"number": 1, "pairings": r1_pairings, "byes": []}],
         "round_number": 2,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert r2_response.status_code == 200
     r2_data = r2_response.json()
@@ -243,7 +243,7 @@ async def test_full_3_round_swiss_tournament(client: AsyncClient) -> None:
         ],
         "round_number": 3,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert r3_response.status_code == 200
     r3_data = r3_response.json()
@@ -374,7 +374,7 @@ async def test_mcmahon_pairing_by_score_groups(client: AsyncClient) -> None:
         "round_number": 1,
         "algorithm": "mcmahon",
         "mcmahon_bar": "3d",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert response.status_code == 200
     data = response.json()
@@ -476,7 +476,7 @@ async def test_handicap_disabled_even_games(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": False,
+        "handicap_type": "none",
     }
 
     response = await client.post("/pair", json=request)
@@ -491,8 +491,8 @@ async def test_handicap_disabled_even_games(client: AsyncClient) -> None:
 @pytest.mark.anyio
 async def test_handicap_reduction(client: AsyncClient) -> None:
     """Test handicap reduction reduces stones."""
-    # Without reduction
-    no_reduction = await client.post("/pair", json={
+    # Without modifier
+    no_modifier = await client.post("/pair", json={
         "players": [
             {"id": "1", "name": "Strong", "rank": "5d"},
             {"id": "2", "name": "Weak", "rank": "1k"},
@@ -500,13 +500,13 @@ async def test_handicap_reduction(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
-        "handicap_reduction": 0,
+        "handicap_type": "rank_difference",
+        "handicap_modifier": "none",
     })
-    no_reduction_stones = no_reduction.json()["pairings"][0]["handicap_stones"]
+    no_modifier_stones = no_modifier.json()["pairings"][0]["handicap_stones"]
 
-    # With 2-stone reduction
-    with_reduction = await client.post("/pair", json={
+    # With minus_2 modifier
+    with_modifier = await client.post("/pair", json={
         "players": [
             {"id": "1", "name": "Strong", "rank": "5d"},
             {"id": "2", "name": "Weak", "rank": "1k"},
@@ -514,13 +514,13 @@ async def test_handicap_reduction(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
-        "handicap_reduction": 2,
+        "handicap_type": "rank_difference",
+        "handicap_modifier": "minus_2",
     })
-    with_reduction_stones = with_reduction.json()["pairings"][0]["handicap_stones"]
+    with_modifier_stones = with_modifier.json()["pairings"][0]["handicap_stones"]
 
-    # Reduction should decrease handicap stones
-    assert with_reduction_stones < no_reduction_stones
+    # Modifier should decrease handicap stones
+    assert with_modifier_stones < no_modifier_stones
 
 
 @pytest.mark.anyio
@@ -534,7 +534,7 @@ async def test_color_assignment_stronger_player_white(client: AsyncClient) -> No
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert response.status_code == 200
     data = response.json()
@@ -663,7 +663,7 @@ async def test_all_same_rank_players(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert response.status_code == 200
     data = response.json()
@@ -686,7 +686,7 @@ async def test_wide_rank_spread(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert response.status_code == 200
     data = response.json()
@@ -766,7 +766,7 @@ async def test_large_tournament_16_players(client: AsyncClient) -> None:
         "previous_rounds": [],
         "round_number": 1,
         "algorithm": "swiss",
-        "handicap_enabled": True,
+        "handicap_type": "rank_difference",
     })
     assert response.status_code == 200
     data = response.json()

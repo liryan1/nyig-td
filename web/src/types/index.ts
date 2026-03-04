@@ -4,12 +4,8 @@ export type GameResult = 'black_wins' | 'white_wins' | 'draw' | 'no_result' | 'b
 export type TournamentStatus = 'upcoming' | 'in_progress' | 'completed';
 export type RoundStatus = 'pending' | 'paired' | 'completed';
 
-export interface StandingsWeights {
-  wins: number;
-  sos: number;
-  sodos: number;
-  extendedSos: number;
-}
+export type HandicapType = 'none' | 'rank_difference';
+export type HandicapModifier = 'none' | 'minus_1' | 'minus_2';
 
 export interface Division {
   id: string;
@@ -20,9 +16,8 @@ export interface Division {
 export interface TournamentSettings {
   numRounds: number;
   pairingAlgorithm: PairingAlgorithm;
-  standingsWeights: StandingsWeights;
-  handicapEnabled: boolean;
-  handicapReduction: number;
+  handicapType: HandicapType;
+  handicapModifier: HandicapModifier;
   mcmahonBar?: string;
   crossDivisionPairing: boolean;
 }
@@ -93,9 +88,8 @@ export interface PlayerStanding {
   wins: number;
   losses: number;
   sos: number;
-  sodos: number;
-  extendedSos: number;
-  totalScore: number;
+  sds: number;
+  sosos: number;
 }
 
 // Form types
@@ -115,10 +109,9 @@ export interface CreateTournamentForm {
   settings: {
     numRounds: number;
     pairingAlgorithm: PairingAlgorithm;
-    handicapEnabled: boolean;
-    handicapReduction: number;
+    handicapType: HandicapType;
+    handicapModifier: HandicapModifier;
     mcmahonBar?: string;
     crossDivisionPairing: boolean;
-    standingsWeights?: Partial<StandingsWeights>;
   };
 }

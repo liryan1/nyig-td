@@ -31,8 +31,8 @@ const schema = z.object({
   settings: z.object({
     numRounds: z.number().int().min(1).max(10),
     pairingAlgorithm: z.enum(['swiss', 'mcmahon', 'round_robin']),
-    handicapEnabled: z.boolean(),
-    handicapReduction: z.number().int().min(0).max(5),
+    handicapType: z.enum(['none', 'rank_difference']),
+    handicapModifier: z.enum(['none', 'minus_1', 'minus_2']),
     mcmahonBar: z.string().regex(/^\d+[kdKD]$/).optional().or(z.literal('')),
     crossDivisionPairing: z.boolean(),
   }),
@@ -56,8 +56,8 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
       settings: {
         numRounds: 4,
         pairingAlgorithm: 'mcmahon',
-        handicapEnabled: true,
-        handicapReduction: 0,
+        handicapType: 'rank_difference',
+        handicapModifier: 'none',
         mcmahonBar: '3d',
         crossDivisionPairing: true,
       },
@@ -66,6 +66,7 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
   });
 
   const algorithm = useWatch({ control: form.control, name: 'settings.pairingAlgorithm' });
+  const handicapType = useWatch({ control: form.control, name: 'settings.handicapType' });
 
   const handleSubmit = (data: FormData) => {
     onSubmit(data as CreateTournamentForm);
@@ -188,42 +189,51 @@ export function TournamentForm({ onSubmit, onCancel, isLoading, defaultValues }:
           />
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="settings.handicapEnabled"
+            name="settings.handicapType"
             render={({ field }) => (
-              <FormItem className="flex items-center gap-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel className="!mt-0">Enable Handicaps</FormLabel>
+              <FormItem>
+                <FormLabel>Handicap Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="rank_difference">Standard (Rank Difference)</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="settings.handicapReduction"
-            render={({ field }) => (
-              <FormItem className="flex items-center gap-2">
-                <FormLabel className="!mt-0">Reduction:</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={5}
-                    className="w-16"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {handicapType !== 'none' && (
+            <FormField
+              control={form.control}
+              name="settings.handicapModifier"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Handicap Modifier</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="minus_1">Minus 1</SelectItem>
+                      <SelectItem value="minus_2">Minus 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         <FormField

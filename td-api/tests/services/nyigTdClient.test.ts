@@ -76,8 +76,8 @@ describe('NyigTdClient', () => {
         previous_rounds: [],
         round_number: 1,
         algorithm: 'mcmahon',
-        handicap_enabled: true,
-        handicap_reduction: 0,
+        handicap_type: 'rank_difference',
+        handicap_modifier: 'none',
       });
 
       expect(result.pairings).toHaveLength(1);
@@ -110,8 +110,8 @@ describe('NyigTdClient', () => {
         previous_rounds: [],
         round_number: 1,
         algorithm: 'mcmahon',
-        handicap_enabled: true,
-        handicap_reduction: 0,
+        handicap_type: 'rank_difference',
+        handicap_modifier: 'none',
       });
 
       expect(result.byes).toHaveLength(1);
@@ -132,9 +132,8 @@ describe('NyigTdClient', () => {
               wins: 3,
               losses: 0,
               sos: 2.5,
-              sodos: 1.5,
-              extended_sos: 0,
-              total_score: 3.35,
+              sds: 1.5,
+              sosos: 0,
             },
           ],
         },
@@ -143,7 +142,6 @@ describe('NyigTdClient', () => {
       const result = await client.calculateStandings({
         players: [{ id: 'player1', name: 'Alice', rank: '5k' }],
         rounds: [],
-        weights: { wins: 1, sos: 0.1, sodos: 0.05, extended_sos: 0 },
       });
 
       expect(result.standings).toHaveLength(1);
@@ -161,18 +159,19 @@ describe('NyigTdClient', () => {
         },
       });
 
-      const result = await client.calculateHandicap('2k', '5k', 0);
+      const result = await client.calculateHandicap('2k', '5k', 'rank_difference', 'none');
 
       expect(mockPost).toHaveBeenCalledWith('/handicap', {
         white_rank: '2k',
         black_rank: '5k',
-        reduction: 0,
+        handicap_type: 'rank_difference',
+        handicap_modifier: 'none',
       });
       expect(result.stones).toBe(3);
       expect(result.komi).toBe(0.5);
     });
 
-    it('should use default reduction of 0 when not provided', async () => {
+    it('should use default params when not provided', async () => {
       mockPost.mockResolvedValue({
         data: {
           stones: 2,
@@ -186,7 +185,8 @@ describe('NyigTdClient', () => {
       expect(mockPost).toHaveBeenCalledWith('/handicap', {
         white_rank: '1k',
         black_rank: '3k',
-        reduction: 0,
+        handicap_type: 'rank_difference',
+        handicap_modifier: 'none',
       });
       expect(result.stones).toBe(2);
     });

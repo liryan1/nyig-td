@@ -9,6 +9,7 @@ from nyig_td.models import (
     TournamentSettings,
     Player,
     PairingAlgorithm,
+    HandicapType,
 )
 from nyig_td.ranks import Rank
 from nyig_td.standings import PlayerStanding
@@ -88,7 +89,7 @@ def swiss_tournament_3div(three_division_players: list[Player]) -> Tournament:
     settings = TournamentSettings(
         num_rounds=5,
         pairing_algorithm=PairingAlgorithm.SWISS,
-        handicap_enabled=True,
+        handicap_type=HandicapType.RANK_DIFFERENCE,
     )
     tournament = Tournament.create("Swiss 3-Div", settings)
     for p in three_division_players:
@@ -103,7 +104,7 @@ def mcmahon_tournament_3div(three_division_players: list[Player]) -> Tournament:
         num_rounds=5,
         pairing_algorithm=PairingAlgorithm.MCMAHON,
         mcmahon_bar="2d",
-        handicap_enabled=True,
+        handicap_type=HandicapType.RANK_DIFFERENCE,
     )
     tournament = Tournament.create("McMahon 3-Div", settings)
     for p in three_division_players:

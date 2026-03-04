@@ -6,19 +6,15 @@ export type TournamentStatus = 'setup' | 'registration' | 'in_progress' | 'compl
 
 export type RoundStatus = 'pending' | 'paired' | 'in_progress' | 'completed';
 
-export interface StandingsWeights {
-  wins: number;
-  sos: number;
-  sodos: number;
-  extendedSos: number;
-}
+export type HandicapType = 'none' | 'rank_difference';
+
+export type HandicapModifier = 'none' | 'minus_1' | 'minus_2';
 
 export interface TournamentSettings {
   numRounds: number;
   pairingAlgorithm: PairingAlgorithm;
-  standingsWeights: StandingsWeights;
-  handicapEnabled: boolean;
-  handicapReduction: number;
+  handicapType: HandicapType;
+  handicapModifier: HandicapModifier;
   mcmahonBar?: string;
   crossDivisionPairing: boolean;
 }
@@ -95,7 +91,6 @@ export interface PlayerStanding {
   wins: number;
   losses: number;
   sos: number;
-  sodos: number;
-  extendedSos: number;
-  totalScore: number;
+  sds: number;
+  sosos: number;
 }

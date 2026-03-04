@@ -1,7 +1,7 @@
 """nyig-td: Tournament director tools for US Go tournaments."""
 
 from .ranks import Rank, RankType, validate_rank
-from .handicap import Handicap, HandicapCalculator
+from .handicap import Handicap, HandicapCalculator, modifier_to_reduction
 from .models import (
     Player,
     Pairing,
@@ -13,7 +13,8 @@ from .models import (
     TournamentStatus,
     GameResult,
     PairingAlgorithm,
-    StandingsWeights,
+    HandicapType,
+    HandicapModifier,
 )
 from .pairing import (
     PairingEngine,
@@ -34,6 +35,7 @@ __all__ = [
     # Handicap
     "Handicap",
     "HandicapCalculator",
+    "modifier_to_reduction",
     # Models
     "Player",
     "Pairing",
@@ -45,7 +47,8 @@ __all__ = [
     "TournamentStatus",
     "GameResult",
     "PairingAlgorithm",
-    "StandingsWeights",
+    "HandicapType",
+    "HandicapModifier",
     # Pairing
     "PairingEngine",
     "SwissPairingEngine",

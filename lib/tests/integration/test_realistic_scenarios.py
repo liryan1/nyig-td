@@ -10,6 +10,7 @@ from nyig_td.models import (
     GameResult,
     PairingAlgorithm,
     RoundStatus,
+    HandicapType,
 )
 from nyig_td.pairing import SwissPairingEngine, McMahonPairingEngine
 from nyig_td.standings import StandingsCalculator
@@ -219,11 +220,9 @@ class TestTiebreakerScenarios:
         tied_scores = [w for w, c in wins_counts.items() if c > 1]
 
         if tied_scores:
-            # Players with same wins should have different total_score due to tiebreakers
+            # Players with same wins should be ordered by tiebreakers
             for tied_wins in tied_scores:
                 tied_players = [s for s in sdk_standings if s.wins == tied_wins]
-                # Total scores should differ (unless perfectly tied)
-                scores = [s.total_score for s in tied_players]
                 # The sorting should establish clear ranks
                 for i, s in enumerate(tied_players):
                     assert s.rank >= 1
@@ -237,7 +236,7 @@ class TestTiebreakerScenarios:
         settings = TournamentSettings(
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=True,
+            handicap_type=HandicapType.RANK_DIFFERENCE,
         )
         tournament = Tournament.create("Upset Test", settings)
 
@@ -285,13 +284,13 @@ class TestTiebreakerScenarios:
 
         standings = calc.calculate(tournament)
 
-        # Find WeakKyu's SODOS - should include points from beating StrongDan
+        # Find WeakKyu's SDS - should include points from beating StrongDan
         weak_kyu_standing = next(s for s in standings if s.player.id == players[1].id)
 
-        # SODOS should be > 0 since they beat someone
-        assert weak_kyu_standing.sodos >= 0
+        # SDS should be > 0 since they beat someone
+        assert weak_kyu_standing.sds >= 0
 
-        # The upset should contribute to WeakKyu's SODOS
+        # The upset should contribute to WeakKyu's SDS
         # since they defeated a strong opponent
 
 
@@ -368,7 +367,7 @@ class TestMcMahonRealisticScenarios:
             num_rounds=4,
             pairing_algorithm=PairingAlgorithm.MCMAHON,
             mcmahon_bar="2d",
-            handicap_enabled=True,
+            handicap_type=HandicapType.RANK_DIFFERENCE,
         )
         tournament = Tournament.create("Club McMahon", settings)
 

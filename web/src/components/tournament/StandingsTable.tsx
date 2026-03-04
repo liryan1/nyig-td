@@ -22,8 +22,8 @@ export function StandingsTable({ standings }: StandingsTableProps) {
           <TableHead>Grade</TableHead>
           <TableHead className="text-right">W-L</TableHead>
           <TableHead className="text-right">SOS</TableHead>
-          <TableHead className="text-right">SODOS</TableHead>
-          <TableHead className="text-right">Total</TableHead>
+          <TableHead className="text-right">SDS</TableHead>
+          <TableHead className="text-right">SOSOS</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -36,8 +36,8 @@ export function StandingsTable({ standings }: StandingsTableProps) {
               {standing.wins}-{standing.losses}
             </TableCell>
             <TableCell className="text-right text-muted-foreground">{standing.sos.toFixed(2)}</TableCell>
-            <TableCell className="text-right text-muted-foreground">{standing.sodos.toFixed(2)}</TableCell>
-            <TableCell className="text-right font-medium">{standing.totalScore.toFixed(3)}</TableCell>
+            <TableCell className="text-right text-muted-foreground">{standing.sds.toFixed(2)}</TableCell>
+            <TableCell className="text-right text-muted-foreground">{standing.sosos.toFixed(2)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

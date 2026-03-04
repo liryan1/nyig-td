@@ -14,6 +14,7 @@ from nyig_td import (
     PairingAlgorithm,
     GameResult,
     RoundStatus,
+    HandicapType,
     SwissPairingEngine,
     StandingsCalculator,
 )
@@ -42,8 +43,7 @@ def main():
     settings = TournamentSettings(
         num_rounds=4,
         pairing_algorithm=PairingAlgorithm.SWISS,
-        handicap_enabled=True,
-        handicap_reduction=0,
+        handicap_type=HandicapType.RANK_DIFFERENCE,
     )
 
     # Create tournament
@@ -131,11 +131,11 @@ def main():
         # Show current standings
         standings = calc.calculate(tournament, through_round=round_num)
         print("\nCurrent Standings:")
-        print(f"  {'Rank':<5} {'Name':<15} {'W-L':<7} {'SOS':<6} {'SODOS':<6}")
+        print(f"  {'Rank':<5} {'Name':<15} {'W-L':<7} {'SOS':<6} {'SDS':<6}")
         print(f"  {'-' * 45}")
         for s in standings:
             print(f"  {s.rank:<5} {s.player.name:<15} "
-                  f"{s.wins:.0f}-{s.losses:.0f}   {s.sos:<6.1f} {s.sodos:<6.1f}")
+                  f"{s.wins:.0f}-{s.losses:.0f}   {s.sos:<6.1f} {s.sds:<6.1f}")
 
     # Final standings
     print(f"\n{'=' * 60}")
@@ -144,12 +144,12 @@ def main():
 
     final_standings = calc.calculate(tournament)
     print(f"\n{'Rank':<5} {'Name':<15} {'Club':<15} {'Grade':<6} {'W-L':<7} "
-          f"{'SOS':<6} {'SODOS':<6} {'Score':<8}")
+          f"{'SOS':<6} {'SDS':<6} {'SOSOS':<6}")
     print("-" * 75)
     for s in final_standings:
         print(f"{s.rank:<5} {s.player.name:<15} {s.player.club:<15} "
               f"{str(s.player.rank):<6} {s.wins:.0f}-{s.losses:.0f}   "
-              f"{s.sos:<6.1f} {s.sodos:<6.1f} {s.total_score:<8.3f}")
+              f"{s.sos:<6.1f} {s.sds:<6.1f} {s.sosos:<6.1f}")
 
 
 if __name__ == "__main__":

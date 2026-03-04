@@ -11,7 +11,7 @@ describe('TournamentForm', () => {
     expect(screen.getByLabelText(/Location/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Description/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Number of Rounds/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Enable Handicaps/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Handicap Type/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Cross-Division Pairing/)).toBeInTheDocument();
   });
 
@@ -69,7 +69,7 @@ describe('TournamentForm', () => {
     const data = onSubmit.mock.calls[0][0];
     expect(data.name).toBe('My Tournament');
     expect(data.settings.numRounds).toBe(4);
-    expect(data.settings.handicapEnabled).toBe(true);
+    expect(data.settings.handicapType).toBe('rank_difference');
     expect(data.settings.crossDivisionPairing).toBe(true);
   });
 

@@ -9,6 +9,7 @@ from nyig_td.models import (
     GameResult,
     PairingAlgorithm,
     RoundStatus,
+    HandicapType,
 )
 from nyig_td.pairing import SwissPairingEngine
 from nyig_td.standings import StandingsCalculator
@@ -82,7 +83,7 @@ class TestSwissWithDivisions:
         settings = TournamentSettings(
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=True,
+            handicap_type=HandicapType.RANK_DIFFERENCE,
         )
         tournament = Tournament.create("Boundary Test", settings)
         for p in boundary_players:
@@ -157,9 +158,9 @@ class TestSwissWithDivisions:
             if winners:
                 # First place should have rank 1
                 assert winners[0].rank == 1
-                # Winners should be in descending score order
+                # Winners should be in descending wins order (or equal wins with tiebreakers)
                 for i in range(len(winners) - 1):
-                    assert winners[i].total_score >= winners[i + 1].total_score
+                    assert winners[i].wins >= winners[i + 1].wins
 
     def test_swiss_division_standings_reranking(
         self,

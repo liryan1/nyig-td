@@ -47,12 +47,13 @@ async def test_handicap_game(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_handicap_with_reduction(client: AsyncClient) -> None:
-    """Test handicap reduction."""
+async def test_handicap_with_modifier(client: AsyncClient) -> None:
+    """Test handicap modifier."""
     response = await client.post("/handicap", json={
         "white_rank": "3d",
         "black_rank": "1k",
-        "reduction": 2,
+        "handicap_type": "rank_difference",
+        "handicap_modifier": "minus_2",
     })
     assert response.status_code == 200
 

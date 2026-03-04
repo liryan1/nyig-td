@@ -6,7 +6,7 @@ These tests simulate actual Go tournament situations.
 import pytest
 from nyig_td.models import (
     Tournament, TournamentSettings, Player, Pairing, Bye, Round,
-    GameResult, PairingAlgorithm, RoundStatus, StandingsWeights
+    GameResult, PairingAlgorithm, RoundStatus, HandicapType, HandicapModifier
 )
 from nyig_td.pairing import (
     SwissPairingEngine, McMahonPairingEngine, get_pairing_engine, PairingResult
@@ -23,7 +23,7 @@ class TestFullSwissTournament:
         self.settings = TournamentSettings(
             num_rounds=4,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=True
+            handicap_type=HandicapType.RANK_DIFFERENCE
         )
         self.tournament = Tournament.create("NYC Go Club Open", self.settings)
 
@@ -182,7 +182,7 @@ class TestSwissColorBalancing:
         settings = TournamentSettings(
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=False  # Even games to test pure color balancing
+            handicap_type=HandicapType.NONE  # Even games to test pure color balancing
         )
         tournament = Tournament.create("Color Test", settings)
 
@@ -229,7 +229,7 @@ class TestSwissHandicapDisabled:
         settings = TournamentSettings(
             num_rounds=2,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=False
+            handicap_type=HandicapType.NONE
         )
         tournament = Tournament.create("Even Tournament", settings)
 
@@ -360,7 +360,7 @@ class TestMcMahonRepeatAndEdgeCases:
             num_rounds=2,
             pairing_algorithm=PairingAlgorithm.MCMAHON,
             mcmahon_bar="3d",
-            handicap_enabled=False
+            handicap_type=HandicapType.NONE
         )
         tournament = Tournament.create("McMahon Even", settings)
 
@@ -553,13 +553,12 @@ class TestStandingsEdgeCases:
         alice_standing = next(s for s in standings if s.player.id == alice.id)
         assert alice_standing.wins == 2.0  # Won both rounds
 
-    def test_standings_extended_sos(self):
-        """Test extended SOS calculation (SOS of opponents)."""
-        weights = StandingsWeights(wins=1.0, sos=0.1, sodos=0.05, extended_sos=0.01)
-        calc = StandingsCalculator(weights=weights)
+    def test_standings_sosos(self):
+        """Test SOSOS calculation (SOS of opponents)."""
+        calc = StandingsCalculator()
 
         settings = TournamentSettings(num_rounds=3)
-        tournament = Tournament.create("Extended SOS", settings)
+        tournament = Tournament.create("SOSOS Test", settings)
 
         alice = Player.create("Alice", "3d")
         bob = Player.create("Bob", "2d")
@@ -590,9 +589,9 @@ class TestStandingsEdgeCases:
 
         standings = calc.calculate(tournament, through_round=2)
 
-        # Verify extended SOS is calculated
+        # Verify SOSOS is calculated
         alice_standing = next(s for s in standings if s.player.id == alice.id)
-        assert alice_standing.extended_sos > 0  # Should have some extended SOS
+        assert alice_standing.sosos > 0  # Should have some SOSOS
 
     def test_player_standing_str(self):
         """Test PlayerStanding string representation."""
@@ -603,9 +602,8 @@ class TestStandingsEdgeCases:
             wins=3.0,
             losses=1.0,
             sos=5.0,
-            sodos=3.0,
-            extended_sos=10.0,
-            total_score=3.55
+            sds=3.0,
+            sosos=10.0,
         )
 
         str_repr = str(standing)
@@ -622,7 +620,7 @@ class TestPairingColorAssignment:
         settings = TournamentSettings(
             num_rounds=2,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=True
+            handicap_type=HandicapType.RANK_DIFFERENCE
         )
         tournament = Tournament.create("Color Test", settings)
 
@@ -646,7 +644,7 @@ class TestPairingColorAssignment:
         settings = TournamentSettings(
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.SWISS,
-            handicap_enabled=False  # Even games for pure color balancing
+            handicap_type=HandicapType.NONE  # Even games for pure color balancing
         )
         tournament = Tournament.create("Balance Test", settings)
 

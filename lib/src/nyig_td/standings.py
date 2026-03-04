@@ -1,11 +1,11 @@
-"""Standings calculation with configurable tiebreakers."""
+"""Standings calculation with fixed tiebreakers."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
 from .models import (
-    Tournament, Player, GameResult, StandingsWeights
+    Tournament, Player, GameResult
 )
 
 
@@ -17,23 +17,19 @@ class PlayerStanding:
     wins: float
     losses: float
     sos: float  # Sum of Opponents' Scores
-    sodos: float  # Sum of Defeated Opponents' Scores
-    extended_sos: float  # SOS of opponents
-    total_score: float  # Weighted total
+    sds: float  # Sum of Defeated opponents' Scores
+    sosos: float  # SOS of opponents (Sum of Opponents' SOS)
 
     def __str__(self) -> str:
         return (
             f"{self.rank}. {self.player.name} ({self.player.rank}) - "
             f"W:{self.wins} L:{self.losses} SOS:{self.sos:.2f} "
-            f"SODOS:{self.sodos:.2f} Total:{self.total_score:.3f}"
+            f"SDS:{self.sds:.2f}"
         )
 
 
 class StandingsCalculator:
-    """Calculate tournament standings with configurable weights."""
-
-    def __init__(self, weights: Optional[StandingsWeights] = None):
-        self.weights = weights or StandingsWeights.default()
+    """Calculate tournament standings with fixed tiebreaker order."""
 
     def calculate(
         self,
@@ -43,12 +39,14 @@ class StandingsCalculator:
         """
         Calculate standings through specified round.
 
+        Sorted by: Wins -> SOS -> SDS -> SOSOS
+
         Args:
             tournament: The tournament
             through_round: Calculate through this round (None = all completed)
 
         Returns:
-            List of PlayerStanding sorted by total score
+            List of PlayerStanding sorted by tiebreakers
         """
         if through_round is None:
             # Find last completed round
@@ -117,7 +115,7 @@ class StandingsCalculator:
                 if bye.player_id in player_stats:
                     player_stats[bye.player_id]["wins"] += bye.points
 
-        # Calculate SOS and SODOS
+        # Calculate SOS and SDS
         for player_id, stats in player_stats.items():
             # SOS: Sum of opponents' scores
             sos = sum(
@@ -127,31 +125,22 @@ class StandingsCalculator:
             )
             stats["sos"] = sos
 
-            # SODOS: Sum of defeated opponents' scores
-            sodos = sum(
+            # SDS: Sum of defeated opponents' scores
+            sds = sum(
                 player_stats[opp]["wins"]
                 for opp in stats["defeated"]
                 if opp in player_stats
             )
-            stats["sodos"] = sodos
+            stats["sds"] = sds
 
-        # Calculate extended SOS (SOS of opponents)
+        # Calculate SOSOS (SOS of opponents)
         for player_id, stats in player_stats.items():
-            extended_sos = sum(
+            sosos = sum(
                 player_stats[opp]["sos"]
                 for opp in stats["opponents"]
                 if opp in player_stats
             )
-            stats["extended_sos"] = extended_sos
-
-        # Calculate weighted total score
-        for stats in player_stats.values():
-            stats["total_score"] = (
-                self.weights.wins * stats["wins"] +
-                self.weights.sos * stats["sos"] +
-                self.weights.sodos * stats["sodos"] +
-                self.weights.extended_sos * stats["extended_sos"]
-            )
+            stats["sosos"] = sosos
 
         # Build standings list
         standings = [
@@ -161,26 +150,25 @@ class StandingsCalculator:
                 wins=stats["wins"],
                 losses=stats["losses"],
                 sos=stats["sos"],
-                sodos=stats["sodos"],
-                extended_sos=stats["extended_sos"],
-                total_score=stats["total_score"],
+                sds=stats["sds"],
+                sosos=stats["sosos"],
             )
             for stats in player_stats.values()
         ]
 
-        # Sort by total score, then wins, then SOS
+        # Sort by wins, then SOS, then SDS, then SOSOS
         standings.sort(
-            key=lambda s: (s.total_score, s.wins, s.sos),
+            key=lambda s: (s.wins, s.sos, s.sds, s.sosos),
             reverse=True
         )
 
-        # Assign ranks (handle ties)
+        # Assign ranks (handle ties: same rank when wins AND sos match)
         current_rank = 1
         for i, standing in enumerate(standings):
             if i > 0:
                 prev = standings[i - 1]
-                if (standing.total_score != prev.total_score or
-                    standing.wins != prev.wins):
+                if (standing.wins != prev.wins or
+                    standing.sos != prev.sos):
                     current_rank = i + 1
             standing.rank = current_rank
 
@@ -195,9 +183,8 @@ class StandingsCalculator:
                 wins=0,
                 losses=0,
                 sos=0,
-                sodos=0,
-                extended_sos=0,
-                total_score=0,
+                sds=0,
+                sosos=0,
             )
             for player in tournament.players.values()
         ]

@@ -12,9 +12,8 @@ const standings: PlayerStanding[] = [
     wins: 3,
     losses: 0,
     sos: 2.0,
-    sodos: 1.5,
-    extendedSos: 0.5,
-    totalScore: 4.0,
+    sds: 1.5,
+    sosos: 0.5,
   },
   {
     rank: 2,
@@ -24,9 +23,8 @@ const standings: PlayerStanding[] = [
     wins: 2,
     losses: 1,
     sos: 1.5,
-    sodos: 1.0,
-    extendedSos: 0.3,
-    totalScore: 2.75,
+    sds: 1.0,
+    sosos: 0.3,
   },
 ];
 
@@ -38,8 +36,8 @@ describe('StandingsTable', () => {
     expect(screen.getByText('Grade')).toBeInTheDocument();
     expect(screen.getByText('W-L')).toBeInTheDocument();
     expect(screen.getByText('SOS')).toBeInTheDocument();
-    expect(screen.getByText('SODOS')).toBeInTheDocument();
-    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.getByText('SDS')).toBeInTheDocument();
+    expect(screen.getByText('SOSOS')).toBeInTheDocument();
   });
 
   it('renders player standings data', () => {
@@ -54,13 +52,13 @@ describe('StandingsTable', () => {
 
   it('formats scores with correct decimal places', () => {
     render(<StandingsTable standings={standings} />);
-    // Total scores use 3 decimal places
-    expect(screen.getByText('4.000')).toBeInTheDocument();
-    expect(screen.getByText('2.750')).toBeInTheDocument();
     // SOS uses 2 decimal places — 2.00 for Alice, 1.50 for Bob
     expect(screen.getByText('2.00')).toBeInTheDocument();
-    // 1.50 appears twice (SOS for Bob and SODOS for Alice)
+    // 1.50 appears twice (SOS for Bob and SDS for Alice)
     expect(screen.getAllByText('1.50')).toHaveLength(2);
+    // SOSOS values
+    expect(screen.getByText('0.50')).toBeInTheDocument();
+    expect(screen.getByText('0.30')).toBeInTheDocument();
   });
 
   it('renders empty table with no standings', () => {

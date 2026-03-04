@@ -36,8 +36,8 @@ export interface PairingRequest {
   round_number: number;
   algorithm: string;
   mcmahon_bar?: string;
-  handicap_enabled: boolean;
-  handicap_reduction: number;
+  handicap_type: string;
+  handicap_modifier: string;
 }
 
 export interface PairingOutput {
@@ -59,17 +59,9 @@ export interface PairingResponse {
   warnings: string[];
 }
 
-export interface StandingsWeightsInput {
-  wins: number;
-  sos: number;
-  sodos: number;
-  extended_sos: number;
-}
-
 export interface StandingsRequest {
   players: PlayerInput[];
   rounds: RoundInput[];
-  weights: StandingsWeightsInput;
   through_round?: number;
 }
 
@@ -81,9 +73,8 @@ export interface PlayerStandingOutput {
   wins: number;
   losses: number;
   sos: number;
-  sodos: number;
-  extended_sos: number;
-  total_score: number;
+  sds: number;
+  sosos: number;
 }
 
 export interface StandingsResponse {
@@ -132,12 +123,14 @@ export class NyigTdClient {
   async calculateHandicap(
     whiteRank: string,
     blackRank: string,
-    reduction: number = 0
+    handicapType: string = 'rank_difference',
+    handicapModifier: string = 'none'
   ): Promise<HandicapResponse> {
     const response = await this.client.post<HandicapResponse>('/handicap', {
       white_rank: whiteRank,
       black_rank: blackRank,
-      reduction,
+      handicap_type: handicapType,
+      handicap_modifier: handicapModifier,
     });
     return response.data;
   }

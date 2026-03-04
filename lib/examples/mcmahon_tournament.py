@@ -14,7 +14,7 @@ from nyig_td import (
     PairingAlgorithm,
     GameResult,
     RoundStatus,
-    StandingsWeights,
+    HandicapType,
     McMahonPairingEngine,
     StandingsCalculator,
 )
@@ -45,15 +45,8 @@ def main():
     settings = TournamentSettings(
         num_rounds=5,
         pairing_algorithm=PairingAlgorithm.MCMAHON,
-        handicap_enabled=True,
-        handicap_reduction=0,
+        handicap_type=HandicapType.RANK_DIFFERENCE,
         mcmahon_bar="3d",  # Players at 3d and above start at score 0
-        standings_weights=StandingsWeights(
-            wins=1.0,
-            sos=0.1,
-            sodos=0.05,
-            extended_sos=0.01,
-        ),
     )
 
     # Create tournament
@@ -104,7 +97,7 @@ def main():
         mm_score = engine.get_initial_mcmahon_score(p)
         print(f"  {p.name:<18} {str(p.rank):<6} {mm_score:>5}")
 
-    calc = StandingsCalculator(weights=settings.standings_weights)
+    calc = StandingsCalculator()
 
     # Simulate each round
     for round_num in range(1, settings.num_rounds + 1):
@@ -169,7 +162,7 @@ def main():
     final_standings = calc.calculate(tournament)
 
     print(f"\n{'Rk':<3} {'Name':<18} {'Club':<14} {'Grade':<5} {'W-L':<6} "
-          f"{'MM':<5} {'SOS':<5} {'Score':<7}")
+          f"{'MM':<5} {'SOS':<5} {'SDS':<5}")
     print("-" * 75)
 
     for s in final_standings:
@@ -178,7 +171,7 @@ def main():
         )
         print(f"{s.rank:<3} {s.player.name:<18} {s.player.club:<14} "
               f"{str(s.player.rank):<5} {s.wins:.0f}-{s.losses:.0f}  "
-              f"{mm_final:>+4.0f} {s.sos:>5.1f} {s.total_score:<7.3f}")
+              f"{mm_final:>+4.0f} {s.sos:>5.1f} {s.sds:<5.1f}")
 
     # Show winners by section
     print("\n" + "=" * 70)

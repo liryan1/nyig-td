@@ -52,9 +52,8 @@ function createTournamentData(overrides = {}) {
     settings: {
       numRounds: 4,
       pairingAlgorithm: 'mcmahon',
-      standingsWeights: { wins: 1, sos: 0.1, sodos: 0.05, extendedSos: 0 },
-      handicapEnabled: true,
-      handicapReduction: 0,
+      handicapType: 'rank_difference',
+      handicapModifier: 'none',
       crossDivisionPairing: true,
     },
     divisions: [],
@@ -613,9 +612,8 @@ describe('Tournament Routes', () => {
           wins: 3,
           losses: 0,
           sos: 2.5,
-          sodos: 1.5,
-          extendedSos: 0,
-          totalScore: 3.35,
+          sds: 1.5,
+          sosos: 0,
         },
         {
           rank: 2,
@@ -625,9 +623,8 @@ describe('Tournament Routes', () => {
           wins: 2,
           losses: 1,
           sos: 2.0,
-          sodos: 1.0,
-          extendedSos: 0,
-          totalScore: 2.25,
+          sds: 1.0,
+          sosos: 0,
         },
       ];
       mockGetStandings.mockResolvedValue(standings);
@@ -739,7 +736,7 @@ describe('Tournament Routes', () => {
   describe('GET /api/tournaments/:id/divisions/:divisionId/standings', () => {
     it('should return division standings', async () => {
       const standings = [
-        { rank: 1, playerId: 'p1', playerName: 'Alice', playerRank: '3d', wins: 2, losses: 0, sos: 1.0, sodos: 0.5, extendedSos: 0, totalScore: 2.15 },
+        { rank: 1, playerId: 'p1', playerName: 'Alice', playerRank: '3d', wins: 2, losses: 0, sos: 1.0, sds: 0.5, sosos: 0 },
       ];
       mockGetStandings.mockResolvedValue(standings);
 

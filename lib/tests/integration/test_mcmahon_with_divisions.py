@@ -9,6 +9,7 @@ from nyig_td.models import (
     GameResult,
     PairingAlgorithm,
     RoundStatus,
+    HandicapType,
 )
 from nyig_td.pairing import McMahonPairingEngine
 from nyig_td.standings import StandingsCalculator
@@ -75,7 +76,7 @@ class TestMcMahonWithDivisions:
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.MCMAHON,
             mcmahon_bar="2d",
-            handicap_enabled=True,
+            handicap_type=HandicapType.RANK_DIFFERENCE,
         )
         tournament = Tournament.create("Cross-Div Pairing", settings)
 
@@ -173,17 +174,11 @@ class TestMcMahonWithDivisions:
         # Get SDK division standings
         sdk_standings = sdk_division.filter_standings(standings.copy())
 
-        # Verify SOS/SODOS are calculated (used for tiebreakers)
+        # Verify SOS/SDS are calculated (used for tiebreakers)
         for s in sdk_standings:
             # SOS should exist since players played opponents
             assert s.sos >= 0
-            assert s.sodos >= 0
-
-        # If there are ties, they should be broken by tiebreakers
-        if len(sdk_standings) >= 2:
-            # Total scores should reflect wins + tiebreakers
-            for s in sdk_standings:
-                assert s.total_score is not None
+            assert s.sds >= 0
 
     def test_mcmahon_all_tied_scores_forcing_suboptimal(self) -> None:
         """All players at same McMahon score."""
@@ -191,7 +186,7 @@ class TestMcMahonWithDivisions:
             num_rounds=3,
             pairing_algorithm=PairingAlgorithm.MCMAHON,
             mcmahon_bar="3d",
-            handicap_enabled=True,
+            handicap_type=HandicapType.RANK_DIFFERENCE,
         )
         tournament = Tournament.create("All Tied", settings)
 

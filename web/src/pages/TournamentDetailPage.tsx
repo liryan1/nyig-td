@@ -458,9 +458,19 @@ function TournamentSettings({
           <p className="text-muted-foreground">{tournament.settings.numRounds}</p>
         </div>
         <div>
-          <label className="text-sm font-medium">Handicap Enabled</label>
-          <p className="text-muted-foreground">{tournament.settings.handicapEnabled ? 'Yes' : 'No'}</p>
+          <label className="text-sm font-medium">Handicap Type</label>
+          <p className="text-muted-foreground">
+            {tournament.settings.handicapType === 'rank_difference' ? 'Standard (Rank Difference)' : 'None'}
+          </p>
         </div>
+        {tournament.settings.handicapType !== 'none' && tournament.settings.handicapModifier !== 'none' && (
+          <div>
+            <label className="text-sm font-medium">Handicap Modifier</label>
+            <p className="text-muted-foreground">
+              {tournament.settings.handicapModifier === 'minus_1' ? 'Minus 1' : 'Minus 2'}
+            </p>
+          </div>
+        )}
         <div>
           <label className="text-sm font-medium">Cross-Division Pairing</label>
           <p className="text-muted-foreground">{tournament.settings.crossDivisionPairing ? 'Yes' : 'No'}</p>
@@ -471,28 +481,6 @@ function TournamentSettings({
             <p className="text-muted-foreground">{tournament.settings.mcmahonBar}</p>
           </div>
         )}
-      </div>
-
-      <div>
-        <label className="text-sm font-medium">Standings Weights</label>
-        <div className="grid grid-cols-4 gap-2 text-sm mt-1">
-          <div>
-            <span className="text-muted-foreground">Wins:</span>{' '}
-            {tournament.settings.standingsWeights.wins}
-          </div>
-          <div>
-            <span className="text-muted-foreground">SOS:</span>{' '}
-            {tournament.settings.standingsWeights.sos}
-          </div>
-          <div>
-            <span className="text-muted-foreground">SODOS:</span>{' '}
-            {tournament.settings.standingsWeights.sodos}
-          </div>
-          <div>
-            <span className="text-muted-foreground">Ext SOS:</span>{' '}
-            {tournament.settings.standingsWeights.extendedSos}
-          </div>
-        </div>
       </div>
     </div>
   );

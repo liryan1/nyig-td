@@ -21,7 +21,7 @@ from nyig_td import (
     PairingAlgorithm,
     GameResult,
     RoundStatus,
-    StandingsWeights,
+    HandicapType,
     McMahonPairingEngine,
     StandingsCalculator,
     Rank,
@@ -81,14 +81,8 @@ This tournament demonstrates how McMahon pairing works in real tournaments:
     settings = TournamentSettings(
         num_rounds=5,
         pairing_algorithm=PairingAlgorithm.MCMAHON,
-        handicap_enabled=True,
+        handicap_type=HandicapType.RANK_DIFFERENCE,
         mcmahon_bar="2d",  # Bar at 2d
-        standings_weights=StandingsWeights(
-            wins=1.0,
-            sos=0.1,
-            sodos=0.05,
-            extended_sos=0.01,
-        ),
     )
 
     tournament = Tournament.create("NYC Spring McMahon Open", settings)
@@ -145,7 +139,7 @@ This tournament demonstrates how McMahon pairing works in real tournaments:
         div_name = next((d.name for d in divisions if d.contains(p.rank)), "Unknown")
         print(f"  {p.name:<18} {str(p.rank):<5} {div_name:<12} {mm:>+3}")
 
-    calc = StandingsCalculator(weights=settings.standings_weights)
+    calc = StandingsCalculator()
 
     # Simulate tournament
     cross_division_games = 0
@@ -219,14 +213,14 @@ This tournament demonstrates how McMahon pairing works in real tournaments:
     print("OVERALL STANDINGS (All Players)")
     print("=" * 75)
     print(f"\n{'Rk':<3} {'Name':<18} {'Rank':<5} {'Div':<5} {'W-L':<6} "
-          f"{'MM':<5} {'SOS':<6} {'Score':<7}")
+          f"{'MM':<5} {'SOS':<6} {'SDS':<6}")
     print("-" * 70)
 
     for s in overall_standings:
         mm_final = engine.get_mcmahon_score(tournament, s.player, settings.num_rounds + 1)
         div_abbr = next((d.name[:3] for d in divisions if d.contains(s.player.rank)), "?")
         print(f"{s.rank:<3} {s.player.name:<18} {str(s.player.rank):<5} {div_abbr:<5} "
-              f"{s.wins:.0f}-{s.losses:.0f}  {mm_final:>+4.0f} {s.sos:>6.1f} {s.total_score:<7.3f}")
+              f"{s.wins:.0f}-{s.losses:.0f}  {mm_final:>+4.0f} {s.sos:>6.1f} {s.sds:<6.1f}")
 
     # Division standings
     print(f"\n{'=' * 75}")
@@ -246,12 +240,12 @@ The cross-division games ARE counted in tiebreakers.
             continue
 
         print(f"\n{div.name} Division:")
-        print(f"  {'Rk':<3} {'Name':<18} {'Rank':<5} {'W-L':<6} {'SOS':<6} {'Score':<7}")
+        print(f"  {'Rk':<3} {'Name':<18} {'Rank':<5} {'W-L':<6} {'SOS':<6} {'SDS':<6}")
         print(f"  {'-' * 55}")
 
         for s in div_standings:
             print(f"  {s.rank:<3} {s.player.name:<18} {str(s.player.rank):<5} "
-                  f"{s.wins:.0f}-{s.losses:.0f}  {s.sos:>6.1f} {s.total_score:<7.3f}")
+                  f"{s.wins:.0f}-{s.losses:.0f}  {s.sos:>6.1f} {s.sds:<6.1f}")
 
     # Prize winners
     print(f"\n{'=' * 75}")
