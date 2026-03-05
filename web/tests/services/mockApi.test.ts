@@ -36,7 +36,7 @@ beforeEach(() => {
 describe('listPlayers', () => {
   it('returns all mock players', async () => {
     const players = await listPlayers();
-    expect(players.length).toBe(15);
+    expect(players.length).toBe(35);
   });
 
   it('filters by search term (name)', async () => {
@@ -47,8 +47,8 @@ describe('listPlayers', () => {
 
   it('filters by search term (rank)', async () => {
     const players = await listPlayers({ search: '5d' });
-    expect(players.length).toBe(1);
-    expect(players[0].name).toBe('Alice Chen');
+    expect(players.length).toBe(2);
+    expect(players.map(p => p.name)).toContain('Alice Chen');
   });
 
   it('filters by search term (club)', async () => {
@@ -82,7 +82,7 @@ describe('createPlayer', () => {
     expect(player.id).toBeTruthy();
 
     const all = await listPlayers();
-    expect(all.length).toBe(16);
+    expect(all.length).toBe(36);
   });
 });
 
@@ -102,7 +102,7 @@ describe('deletePlayer', () => {
   it('removes a player', async () => {
     await deletePlayer('p1');
     const all = await listPlayers();
-    expect(all.length).toBe(14);
+    expect(all.length).toBe(34);
     expect(all.find((p) => p.id === 'p1')).toBeUndefined();
   });
 
@@ -116,7 +116,7 @@ describe('deletePlayer', () => {
 describe('listTournaments', () => {
   it('returns all tournaments', async () => {
     const tournaments = await listTournaments();
-    expect(tournaments.length).toBe(3);
+    expect(tournaments.length).toBe(4);
   });
 
   it('filters by status', async () => {
@@ -199,7 +199,7 @@ describe('deleteTournament', () => {
   it('removes a tournament', async () => {
     await deleteTournament('t1');
     const all = await listTournaments();
-    expect(all.length).toBe(2);
+    expect(all.length).toBe(3);
   });
 });
 

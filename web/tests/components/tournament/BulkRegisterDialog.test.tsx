@@ -1,13 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '../../utils';
-import {
-  BulkRegisterDialog,
-  validateRows,
-  categorizeRows,
-  parseCsvString,
-  type CategorizedRow,
-} from '@/components/tournament/BulkRegisterDialog';
+import { BulkRegisterDialog } from '@/components/tournament/BulkRegisterDialog';
+import { validateRows, categorizeRows, parseCsvString } from '@/components/tournament/bulkRegisterUtils';
 import type { Player } from '@/types';
 
 const player1: Player = {
@@ -69,7 +64,7 @@ describe('validateRows', () => {
 
   it('reports missing aga_id in a row', () => {
     const data = [{ name: 'John', aga_id: '', rank: '5k' }];
-    const { players, errors } = validateRows(data, ['name', 'aga_id', 'rank']);
+    const { errors } = validateRows(data, ['name', 'aga_id', 'rank']);
 
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toContain('missing aga_id');

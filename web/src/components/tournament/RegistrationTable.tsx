@@ -88,11 +88,13 @@ export function RegistrationTable({
     })
     .join('|');
 
-  useEffect(() => {
+  const [prevFingerprint, setPrevFingerprint] = useState(serverFingerprint);
+  if (serverFingerprint !== prevFingerprint) {
+    setPrevFingerprint(serverFingerprint);
     setRoundOverrides(new Map());
     setCheckInOverrides(new Map());
     setWithdrawOverrides(new Set());
-  }, [serverFingerprint]);
+  }
 
   // beforeunload warning when dirty
   useEffect(() => {
