@@ -175,10 +175,10 @@ class TestMcMahonWithDivisions:
         sdk_standings = sdk_division.filter_standings(standings.copy())
 
         # Verify SOS/SDS are calculated (used for tiebreakers)
+        # In McMahon, SOS/SDS use MMS (initial + wins) and can be negative
         for s in sdk_standings:
-            # SOS should exist since players played opponents
-            assert s.sos >= 0
-            assert s.sds >= 0
+            assert isinstance(s.sos, float)
+            assert isinstance(s.sds, float)
 
     def test_mcmahon_all_tied_scores_forcing_suboptimal(self) -> None:
         """All players at same McMahon score."""

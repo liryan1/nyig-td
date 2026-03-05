@@ -1,6 +1,7 @@
 """Pairing algorithms for Go tournaments."""
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
 import random
@@ -92,6 +93,32 @@ class PairingEngine(ABC):
                 score += bye.points
         return score
 
+    def _count_byes_received(
+        self,
+        tournament: Tournament,
+        player_id: str,
+        up_to_round: int,
+    ) -> int:
+        """Count how many byes a player has received in prior rounds."""
+        count = 0
+        for i in range(up_to_round - 1):
+            if tournament.rounds[i].has_bye(player_id):
+                count += 1
+        return count
+
+    def _select_bye_player(
+        self,
+        candidates: list[Player],
+        tournament: Tournament,
+        round_number: int,
+    ) -> Player:
+        """Select bye recipient: prefer player who hasn't had a bye, then lowest score."""
+        return min(candidates, key=lambda p: (
+            self._count_byes_received(tournament, p.id, round_number),
+            self._get_player_score(tournament, p.id, round_number),
+            p.rank.value,  # Weakest player gets bye among ties
+        ))
+
     def _assign_colors(
         self,
         tournament: Tournament,
@@ -166,9 +193,10 @@ class SwissPairingEngine(PairingEngine):
         byes: list[Bye] = []
         board_number = 1
 
-        # Handle odd number of players - give bye to lowest ranked unpaired
+        # Handle odd number of players - fair bye selection
         if len(unpaired) % 2 == 1:
-            bye_player = unpaired.pop()
+            bye_player = self._select_bye_player(unpaired, tournament, round_number)
+            unpaired.remove(bye_player)
             byes.append(Bye(player_id=bye_player.id))
             warnings.append(f"Bye given to {bye_player.name}")
 
@@ -243,20 +271,8 @@ class McMahonPairingEngine(PairingEngine):
         self.bar_rank = Rank.from_string(bar_rank) if bar_rank else Rank.from_dan(3)
 
     def get_initial_mcmahon_score(self, player: Player) -> int:
-        """
-        Calculate initial McMahon score for a player.
-
-        Players at the bar start at 0.
-        Lower ranked players start negative (1 point per rank below bar).
-        Higher ranked players also start at 0 (compressed at top).
-        """
-        if player.initial_mcmahon_score is not None:
-            return player.initial_mcmahon_score
-
-        diff = player.rank.difference(self.bar_rank)
-        if diff >= 0:
-            return 0  # At or above bar
-        return diff  # Below bar (negative)
+        """Calculate initial McMahon score for a player."""
+        return player.get_initial_mcmahon_score(self.bar_rank)
 
     def get_mcmahon_score(
         self,
@@ -286,82 +302,113 @@ class McMahonPairingEngine(PairingEngine):
         # Get active players
         active_players = tournament.get_active_players(round_number)
 
-        # Calculate McMahon scores and sort
+        # Calculate McMahon scores
         players_with_mm_scores = [
             (p, self.get_mcmahon_score(tournament, p, round_number))
             for p in active_players
         ]
-        # Sort by McMahon score (desc), then rank for tiebreak
-        players_with_mm_scores.sort(key=lambda x: (-x[1], -x[0].rank.value))
 
-        unpaired = [p for p, _ in players_with_mm_scores]
         pairings: list[Pairing] = []
         byes: list[Bye] = []
         board_number = 1
 
-        # Handle bye for odd number
-        if len(unpaired) % 2 == 1:
-            # Give bye to lowest McMahon score player
-            bye_player = unpaired.pop()
+        # Group players by MMS into score groups
+        score_groups: dict[float, list[Player]] = defaultdict(list)
+        for player, mm_score in players_with_mm_scores:
+            score_groups[mm_score].append(player)
+
+        sorted_scores = sorted(score_groups.keys(), reverse=True)
+
+        # Handle odd total: select bye player from all candidates
+        all_players = [p for p, _ in players_with_mm_scores]
+        if len(all_players) % 2 == 1:
+            bye_player = self._select_bye_player(all_players, tournament, round_number)
+            score_groups[self.get_mcmahon_score(tournament, bye_player, round_number)].remove(bye_player)
             byes.append(Bye(player_id=bye_player.id))
             warnings.append(f"Bye given to {bye_player.name}")
+            # Remove empty score groups
+            score_groups = {k: v for k, v in score_groups.items() if v}
+            sorted_scores = sorted(score_groups.keys(), reverse=True)
 
-        # Group by McMahon score for pairing within groups
-        while unpaired:
-            player = unpaired.pop(0)
-            player_mm = self.get_mcmahon_score(tournament, player, round_number)
-            previous_opponents = self._get_previous_opponents(
-                tournament, player.id, round_number
-            )
+        floater: Optional[Player] = None
 
-            # Find opponent with same/similar McMahon score
-            opponent: Optional[Player] = None
-            best_score_diff = float('inf')
+        for idx, score in enumerate(sorted_scores):
+            group = score_groups[score]
 
-            for candidate in unpaired:
-                if candidate.id in previous_opponents:
-                    continue
-                candidate_mm = self.get_mcmahon_score(
-                    tournament, candidate, round_number
+            if floater:
+                group.insert(0, floater)  # Add floater at top (from higher group)
+                floater = None
+
+            # Sort by rank descending (strongest first within group)
+            group.sort(key=lambda p: -p.rank.value)
+
+            if len(group) % 2 == 1:
+                if idx == len(sorted_scores) - 1:
+                    # Last group — give bye to weakest if no bye yet, else just pop
+                    if not byes:
+                        bye_candidate = self._select_bye_player(group, tournament, round_number)
+                        group.remove(bye_candidate)
+                        byes.append(Bye(player_id=bye_candidate.id))
+                        warnings.append(f"Bye given to {bye_candidate.name}")
+                    else:
+                        # Float to create a pair with leftover — handled after loop
+                        floater = group.pop()
+                else:
+                    # Float weakest player down to next group
+                    floater = group.pop()
+
+            # Split and pair within group: top half vs bottom half
+            mid = len(group) // 2
+            top_half = group[:mid]
+            bottom_half = group[mid:]
+
+            for i in range(len(top_half)):
+                player = top_half[i]
+                opponent = bottom_half[i]
+                previous_opponents = self._get_previous_opponents(
+                    tournament, player.id, round_number
                 )
-                score_diff = abs(player_mm - candidate_mm)
-                if score_diff < best_score_diff:
-                    best_score_diff = score_diff
-                    opponent = candidate
 
-            if opponent is None and unpaired:
-                # Accept repeat pairing
-                opponent = unpaired[0]
-                warnings.append(
-                    f"Repeat pairing: {player.name} vs {opponent.name}"
+                # Swap within bottom half to avoid repeats
+                if opponent.id in previous_opponents:
+                    swapped = False
+                    for j in range(len(bottom_half)):
+                        if j != i and bottom_half[j].id not in previous_opponents:
+                            # Also check the player at position j isn't a repeat for top_half[j]
+                            bottom_half[i], bottom_half[j] = bottom_half[j], bottom_half[i]
+                            opponent = bottom_half[i]
+                            swapped = True
+                            break
+                    if not swapped:
+                        warnings.append(
+                            f"Repeat pairing: {player.name} vs {opponent.name}"
+                        )
+
+                # Assign colors
+                black, white = self._assign_colors(
+                    tournament, player, opponent, round_number
                 )
 
-            if opponent is None:
-                byes.append(Bye(player_id=player.id))
-                continue
+                # Calculate handicap
+                if tournament.settings.handicap_type != HandicapType.NONE:
+                    handicap = handicap_calc.calculate(white.rank, black.rank)
+                else:
+                    handicap = handicap_calc.calculate(white.rank, white.rank)
 
-            unpaired.remove(opponent)
+                pairing = Pairing.create(
+                    black_player_id=black.id,
+                    white_player_id=white.id,
+                    board_number=board_number,
+                    handicap_stones=handicap.stones,
+                    komi=handicap.komi,
+                )
+                pairings.append(pairing)
+                board_number += 1
 
-            # Assign colors
-            black, white = self._assign_colors(
-                tournament, player, opponent, round_number
-            )
-
-            # Calculate handicap
-            if tournament.settings.handicap_type != HandicapType.NONE:
-                handicap = handicap_calc.calculate(white.rank, black.rank)
-            else:
-                handicap = handicap_calc.calculate(white.rank, white.rank)
-
-            pairing = Pairing.create(
-                black_player_id=black.id,
-                white_player_id=white.id,
-                board_number=board_number,
-                handicap_stones=handicap.stones,
-                komi=handicap.komi,
-            )
-            pairings.append(pairing)
-            board_number += 1
+        # Handle leftover floater after all groups processed
+        if floater:
+            byes.append(Bye(player_id=floater.id))
+            warnings.append(f"Bye given to {floater.name}")
 
         return PairingResult(pairings=pairings, byes=byes, warnings=warnings)
 

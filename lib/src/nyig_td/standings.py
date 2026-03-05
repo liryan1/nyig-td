@@ -7,8 +7,9 @@ from functools import cmp_to_key
 from typing import Any, Optional
 
 from .models import (
-    Tournament, Player, GameResult
+    Tournament, Player, GameResult, PairingAlgorithm
 )
+from .ranks import Rank
 
 
 class TiebreakerCriteria(Enum):
@@ -59,13 +60,17 @@ class PlayerStanding:
     sos: float  # Sum of Opponents' Scores
     sds: float  # Sum of Defeated opponents' Scores
     sosos: float  # SOS of opponents (Sum of Opponents' SOS)
+    score: float = 0.0  # Ranking score: MMS for McMahon, wins for Swiss
 
     def __str__(self) -> str:
-        return (
+        parts = (
             f"{self.rank}. {self.player.name} ({self.player.rank}) - "
             f"W:{self.wins} L:{self.losses} SOS:{self.sos:.2f} "
             f"SDS:{self.sds:.2f}"
         )
+        if self.score != self.wins:
+            parts += f" MMS:{self.score:.1f}"
+        return parts
 
 
 class StandingsCalculator:
@@ -101,15 +106,24 @@ class StandingsCalculator:
             # No rounds played yet
             return self._initial_standings(tournament)
 
+        # Detect McMahon and compute bar rank
+        is_mcmahon = tournament.settings.pairing_algorithm == PairingAlgorithm.MCMAHON
+        bar_rank: Optional[Rank] = None
+        if is_mcmahon:
+            bar_rank = (Rank.from_string(tournament.settings.mcmahon_bar)
+                        if tournament.settings.mcmahon_bar else Rank.from_dan(3))
+
         # Calculate base stats for each player
         player_stats: dict[str, dict[str, Any]] = {}
         for player_id, player in tournament.players.items():
+            initial_mms = player.get_initial_mcmahon_score(bar_rank) if bar_rank else 0
             player_stats[player_id] = {
                 "player": player,
                 "wins": 0.0,
                 "losses": 0.0,
                 "opponents": [],
                 "defeated": [],
+                "initial_mms": initial_mms,
             }
 
         # Process each round
@@ -157,19 +171,20 @@ class StandingsCalculator:
                 if bye.player_id in player_stats:
                     player_stats[bye.player_id]["wins"] += bye.points
 
-        # Calculate SOS and SDS
+        # Calculate SOS and SDS using MMS (initial_mms + wins)
         for player_id, stats in player_stats.items():
-            # SOS: Sum of opponents' scores
+            # SOS: Sum of opponents' scores (MMS for McMahon, wins for Swiss)
             sos = sum(
-                player_stats[opp]["wins"]
+                player_stats[opp]["initial_mms"] + player_stats[opp]["wins"]
                 for opp in stats["opponents"]
                 if opp in player_stats
             )
             stats["sos"] = sos
 
-            # SDS: Sum of defeated opponents' scores
+            # Note: SDS (SODOS) in McMahon is scale-dependent — results vary
+            # based on the MMS origin point. Use SOS as preferred tiebreaker.
             sds = sum(
-                player_stats[opp]["wins"]
+                player_stats[opp]["initial_mms"] + player_stats[opp]["wins"]
                 for opp in stats["defeated"]
                 if opp in player_stats
             )
@@ -218,13 +233,15 @@ class StandingsCalculator:
                 sos=stats["sos"],
                 sds=stats["sds"],
                 sosos=stats["sosos"],
+                score=stats["initial_mms"] + stats["wins"],
             )
             for stats in player_stats.values()
         ]
 
         # Build comparator based on tiebreaker order
+        # WINS criterion uses 'score' (MMS for McMahon, wins for Swiss)
         stat_getters: dict[TiebreakerCriteria, str] = {
-            TiebreakerCriteria.WINS: "wins",
+            TiebreakerCriteria.WINS: "score",
             TiebreakerCriteria.SOS: "sos",
             TiebreakerCriteria.SDS: "sds",
             TiebreakerCriteria.SOSOS: "sosos",

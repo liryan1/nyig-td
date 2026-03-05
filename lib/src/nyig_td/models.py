@@ -54,6 +54,17 @@ class Player:
             return True  # Participating in all rounds
         return round_number in self.rounds_participating
 
+    def get_initial_mcmahon_score(self, bar_rank: Rank) -> int:
+        """Calculate initial McMahon score relative to bar rank.
+
+        Players at the bar start at 0. Lower ranked players start negative.
+        Higher ranked players also start at 0 (compressed at top).
+        """
+        if self.initial_mcmahon_score is not None:
+            return self.initial_mcmahon_score
+        diff = self.rank.difference(bar_rank)
+        return 0 if diff >= 0 else diff
+
     @classmethod
     def create(
         cls,
