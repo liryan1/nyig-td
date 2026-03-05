@@ -195,6 +195,79 @@ class TestMcMahonRepeatAvoidance:
         assert len(repeat_warnings) == 0
 
 
+class TestMcMahonBacktracking:
+    """Test that backtracking avoids repeats greedy algorithm would miss."""
+
+    def test_hogwarts_open_round4_no_repeats(self):
+        """Reproduce real scenario: 10 players, bar=5d, 4 rounds.
+
+        After 3 rounds, the top 4 (9d,8d,7d,5d) have all played each other,
+        so round 4 must pair them with bottom 6. Greedy fails because it
+        "uses up" bottom players that others need, forcing a repeat at the end.
+        Backtracking finds the repeat-free solution.
+        """
+        from nyig_td.models import HandicapType
+
+        settings = TournamentSettings(
+            num_rounds=4,
+            pairing_algorithm=PairingAlgorithm.MCMAHON,
+            mcmahon_bar="5d",
+            handicap_type=HandicapType.RANK_DIFFERENCE,
+        )
+        tournament = Tournament.create("Hogwarts Open", settings)
+
+        # Create all 10 players
+        alex = Player.create("Alex Qi", "9d")
+        hermione = Player.create("Hermione Granger", "8d")
+        tom = Player.create("Tom Riddle", "7d")
+        luna = Player.create("Luna Lovegood", "5d")
+        ron = Player.create("Ron Weasley", "1d")
+        draco = Player.create("Draco Malfoy", "2k")
+        minerva = Player.create("Minerva McGonagall", "2k")
+        lucius = Player.create("Lucius Malfoy", "5k")
+        severus = Player.create("Severus Snape", "5k")
+        neville = Player.create("Neville Longbottom", "10k")
+
+        for p in [alex, hermione, tom, luna, ron, draco, minerva, lucius, severus, neville]:
+            tournament.add_player(p)
+
+        engine = McMahonPairingEngine(bar_rank="5d")
+        all_prev_pairs: set[frozenset[str]] = set()
+
+        for round_num in range(1, 5):
+            result = engine.generate_pairings(tournament, round_num)
+            rnd = tournament.get_round(round_num)
+            rnd.pairings = result.pairings
+            rnd.byes = result.byes
+
+            # Check no repeats in this round
+            round_pairs = {
+                frozenset([p.black_player_id, p.white_player_id])
+                for p in result.pairings
+            }
+            repeats = round_pairs & all_prev_pairs
+            repeat_warnings = [w for w in result.warnings if "Repeat" in w]
+
+            assert len(repeats) == 0, (
+                f"Round {round_num} has repeat pairings: {repeats}"
+            )
+            assert len(repeat_warnings) == 0, (
+                f"Round {round_num} has repeat warnings: {repeat_warnings}"
+            )
+
+            all_prev_pairs |= round_pairs
+
+            # Simulate results: higher-ranked player wins
+            for pairing in rnd.pairings:
+                black = tournament.players[pairing.black_player_id]
+                white = tournament.players[pairing.white_player_id]
+                if white.rank.value > black.rank.value:
+                    pairing.result = GameResult.WHITE_WIN
+                else:
+                    pairing.result = GameResult.BLACK_WIN
+            rnd.status = RoundStatus.COMPLETED
+
+
 class TestGetPairingEngine:
     """Test factory function."""
 

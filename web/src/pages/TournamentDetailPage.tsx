@@ -340,7 +340,22 @@ export function TournamentDetailPage() {
             </CardHeader>
             <CardContent>
               {standings && standings.length > 0 ? (
-                <StandingsTable standings={standings} tiebreakerOrder={tournament.settings.tiebreakerOrder} />
+                <StandingsTable
+                  standings={standings}
+                  tiebreakerOrder={tournament.settings.tiebreakerOrder}
+                  divisionGroups={
+                    !standingsDivision && tournament.divisions.length > 0
+                      ? tournament.divisions.map((div) => ({
+                        division: div,
+                        playerIds: new Set(
+                          tournament.registrations
+                            .filter((r) => !r.withdrawn && r.divisionId === div.id)
+                            .map((r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id))
+                        ),
+                      }))
+                      : undefined
+                  }
+                />
               ) : (
                 <p className="text-muted-foreground">No standings yet. Complete at least one round.</p>
               )}

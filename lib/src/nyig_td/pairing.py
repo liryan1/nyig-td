@@ -118,6 +118,86 @@ class PairingEngine(ABC):
             p.rank.value,  # Weakest player gets bye among ties
         ))
 
+    def _find_pairings_backtrack(
+        self,
+        players: list[Player],
+        tournament: Tournament,
+        round_number: int,
+        score_fn: dict[str, float],
+    ) -> tuple[list[tuple[Player, Player]], list[str]]:
+        """Find pairings that minimize repeats using backtracking.
+
+        Tries closest-score non-repeat opponents first, backtracks if a
+        choice would force avoidable repeats later. Falls back to greedy
+        with repeats only when no repeat-free solution exists.
+        """
+        # Pre-compute previous opponents for all players
+        prev_opps: dict[str, set[str]] = {
+            p.id: self._get_previous_opponents(tournament, p.id, round_number)
+            for p in players
+        }
+
+        result: list[tuple[Player, Player]] = []
+
+        def backtrack(remaining: list[Player]) -> bool:
+            if not remaining:
+                return True
+            player = remaining[0]
+            rest = remaining[1:]
+            p_score = score_fn[player.id]
+
+            # Try candidates sorted by score closeness
+            candidates = sorted(
+                rest, key=lambda c: abs(p_score - score_fn[c.id])
+            )
+            for candidate in candidates:
+                if candidate.id not in prev_opps[player.id]:
+                    new_remaining = [p for p in rest if p.id != candidate.id]
+                    result.append((player, candidate))
+                    if backtrack(new_remaining):
+                        return True
+                    result.pop()
+            return False
+
+        if backtrack(players):
+            return result, []
+
+        # Backtracking found no repeat-free solution — use greedy with repeats
+        warnings: list[str] = []
+        remaining = list(players)
+        greedy_result: list[tuple[Player, Player]] = []
+
+        while remaining:
+            player = remaining.pop(0)
+            p_score = score_fn[player.id]
+
+            # Prefer closest-score non-repeat
+            opponent: Optional[Player] = None
+            best_diff = float("inf")
+            for c in remaining:
+                if c.id in prev_opps[player.id]:
+                    continue
+                diff = abs(p_score - score_fn[c.id])
+                if diff < best_diff:
+                    best_diff = diff
+                    opponent = c
+
+            if opponent is None and remaining:
+                opponent = min(
+                    remaining, key=lambda c: abs(p_score - score_fn[c.id])
+                )
+                warnings.append(
+                    f"Repeat pairing: {player.name} vs {opponent.name}"
+                )
+
+            if opponent is None:
+                break
+
+            remaining.remove(opponent)
+            greedy_result.append((player, opponent))
+
+        return greedy_result, warnings
+
     def _assign_colors(
         self,
         tournament: Tournament,
@@ -187,46 +267,26 @@ class SwissPairingEngine(PairingEngine):
         ]
         players_with_scores.sort(key=lambda x: (-x[1], -x[0].rank.value))
 
-        unpaired = [p for p, _ in players_with_scores]
+        ordered_players = [p for p, _ in players_with_scores]
+        score_map: dict[str, float] = {p.id: s for p, s in players_with_scores}
         pairings: list[Pairing] = []
         byes: list[Bye] = []
         board_number = 1
 
         # Handle odd number of players - fair bye selection
-        if len(unpaired) % 2 == 1:
-            bye_player = self._select_bye_player(unpaired, tournament, round_number)
-            unpaired.remove(bye_player)
+        if len(ordered_players) % 2 == 1:
+            bye_player = self._select_bye_player(ordered_players, tournament, round_number)
+            ordered_players.remove(bye_player)
             byes.append(Bye(player_id=bye_player.id))
             warnings.append(f"Bye given to {bye_player.name}")
 
-        # Pair players
-        while unpaired:
-            player = unpaired.pop(0)
-            previous_opponents = self._get_previous_opponents(
-                tournament, player.id, round_number
-            )
+        # Find pairings with backtracking to avoid unnecessary repeats
+        paired, pair_warnings = self._find_pairings_backtrack(
+            ordered_players, tournament, round_number, score_map,
+        )
+        warnings.extend(pair_warnings)
 
-            # Find best opponent (similar score, not previously played)
-            opponent: Optional[Player] = None
-            for candidate in unpaired:
-                if candidate.id not in previous_opponents:
-                    opponent = candidate
-                    break
-
-            if opponent is None:
-                # All remaining players were previous opponents
-                if unpaired:
-                    opponent = unpaired[0]
-                    warnings.append(
-                        f"Repeat pairing: {player.name} vs {opponent.name}"
-                    )
-                else:
-                    # Odd player out - shouldn't happen
-                    byes.append(Bye(player_id=player.id))
-                    continue
-
-            unpaired.remove(opponent)
-
+        for player, opponent in paired:
             # Assign colors
             black, white = self._assign_colors(
                 tournament, player, opponent, round_number
@@ -322,46 +382,17 @@ class McMahonPairingEngine(PairingEngine):
             byes.append(Bye(player_id=bye_player.id))
             warnings.append(f"Bye given to {bye_player.name}")
 
-        # Build MMS lookup and unpaired list (ordered by MMS desc, rank desc)
+        # Build MMS lookup and player list (ordered by MMS desc, rank desc)
         mm_scores: dict[str, float] = {p.id: s for p, s in players_with_mm_scores}
-        unpaired = [p for p, _ in players_with_mm_scores]
+        ordered_players = [p for p, _ in players_with_mm_scores]
 
-        # Pair greedily: process from highest MMS, prefer closest-MMS non-repeat
-        while unpaired:
-            player = unpaired.pop(0)
-            player_mm = mm_scores[player.id]
-            previous_opponents = self._get_previous_opponents(
-                tournament, player.id, round_number
-            )
+        # Find pairings with backtracking to avoid unnecessary repeats
+        paired, pair_warnings = self._find_pairings_backtrack(
+            ordered_players, tournament, round_number, mm_scores,
+        )
+        warnings.extend(pair_warnings)
 
-            # Find best opponent: closest MMS that isn't a repeat
-            opponent: Optional[Player] = None
-            best_score_diff = float('inf')
-
-            for candidate in unpaired:
-                if candidate.id in previous_opponents:
-                    continue
-                score_diff = abs(player_mm - mm_scores[candidate.id])
-                if score_diff < best_score_diff:
-                    best_score_diff = score_diff
-                    opponent = candidate
-
-            if opponent is None and unpaired:
-                # All remaining are previous opponents — pick closest MMS
-                opponent = min(
-                    unpaired,
-                    key=lambda c: abs(player_mm - mm_scores[c.id]),
-                )
-                warnings.append(
-                    f"Repeat pairing: {player.name} vs {opponent.name}"
-                )
-
-            if opponent is None:
-                byes.append(Bye(player_id=player.id))
-                continue
-
-            unpaired.remove(opponent)
-
+        for player, opponent in paired:
             # Assign colors
             black, white = self._assign_colors(
                 tournament, player, opponent, round_number
