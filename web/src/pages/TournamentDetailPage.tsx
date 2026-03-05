@@ -7,10 +7,11 @@ import {
   listPlayers,
   registerPlayer,
   bulkRegisterPlayers,
-  withdrawPlayer,
   updateRegistration,
+  bulkUpdateRegistrations,
   generatePairings,
   unpairMatch,
+  unpairAll,
   manualPair,
   recordResult,
   publishRound,
@@ -18,11 +19,8 @@ import {
   getDivisionStandings,
   addDivision,
   removeDivision,
-  checkInPlayer,
-  bulkCheckInPlayers,
 } from '@/services';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -54,6 +52,7 @@ import { StandingsTable } from '@/components/tournament/StandingsTable';
 import { BulkRegisterDialog } from '@/components/tournament/BulkRegisterDialog';
 import { TiebreakerOrderEditor } from '@/components/tournament/TiebreakerOrderEditor';
 import { QRCodeDialog } from '@/components/tournament/QRCodeDialog';
+import type { BulkUpdate } from '@/components/tournament/RegistrationTable';
 import type { Tournament, Player, Division, GameResult, TiebreakerCriteria } from '@/types';
 
 export function TournamentDetailPage() {
@@ -62,11 +61,11 @@ export function TournamentDetailPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showBulkRegister, setShowBulkRegister] = useState(false);
   const [standingsDivision, setStandingsDivision] = useState<string | null>(null);
-  const [hasPendingRoundChanges, setHasPendingRoundChanges] = useState(false);
+  const [hasPendingChanges, setHasPendingRoundChanges] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
 
-  const blocker = useBlocker(hasPendingRoundChanges);
+  const blocker = useBlocker(hasPendingChanges);
 
   const handleDirtyChange = useCallback((isDirty: boolean) => {
     setHasPendingRoundChanges(isDirty);
@@ -127,35 +126,15 @@ export function TournamentDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: (playerId: string) => withdrawPlayer(id!, playerId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
-  });
-
   const changeDivisionMutation = useMutation({
     mutationFn: ({ playerId, divisionId }: { playerId: string; divisionId: string | null }) =>
       updateRegistration(id!, playerId, { divisionId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
-  const saveRoundsMutation = useMutation({
-    mutationFn: (changes: Array<{ playerId: string; roundsParticipating: number[] }>) =>
-      Promise.all(
-        changes.map((c) =>
-          updateRegistration(id!, c.playerId, { roundsParticipating: c.roundsParticipating })
-        )
-      ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
-  });
-
-  const checkInMutation = useMutation({
-    mutationFn: ({ playerId, checkedIn }: { playerId: string; checkedIn: boolean }) =>
-      checkInPlayer(id!, playerId, checkedIn),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
-  });
-
-  const bulkCheckInMutation = useMutation({
-    mutationFn: (playerIds: string[]) => bulkCheckInPlayers(id!, playerIds),
+  const saveMutation = useMutation({
+    mutationFn: (changes: BulkUpdate[]) =>
+      bulkUpdateRegistrations(id!, changes),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
@@ -167,6 +146,11 @@ export function TournamentDetailPage() {
   const unpairMutation = useMutation({
     mutationFn: ({ roundNumber, boardNumber }: { roundNumber: number; boardNumber: number }) =>
       unpairMatch(id!, roundNumber, boardNumber),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
+  });
+
+  const unpairAllMutation = useMutation({
+    mutationFn: (roundNumber: number) => unpairAll(id!, roundNumber),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament', id] }),
   });
 
@@ -219,20 +203,35 @@ export function TournamentDetailPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link to="/" className="text-primary hover:underline text-sm">
-          &larr; Back to Tournaments
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">{tournament.name}</h1>
-        <p className="text-muted-foreground">
-          {new Date(tournament.date).toLocaleDateString()}
-          {tournament.location && ` - ${tournament.location}`}
-        </p>
-        <div className="mt-2 flex gap-2 items-center">
-          <StatusBadge status={tournament.status} />
-          <span className="text-sm text-muted-foreground">
-            {tournament.settings.numRounds} rounds | {tournament.settings.pairingAlgorithm.toUpperCase()}
-          </span>
+      <div className='flex justify-between mb-6'>
+        <div>
+          <h1 className="text-2xl font-bold mt-2">{tournament.name}</h1>
+          <p className="text-muted-foreground">
+            {new Date(tournament.date).toLocaleDateString()}
+            {tournament.location && ` - ${tournament.location}`}
+          </p>
+          <div className="mt-2 flex gap-2 items-center">
+            <span className="text-sm text-muted-foreground">
+              {tournament.settings.numRounds} rounds | {tournament.settings.pairingAlgorithm.toUpperCase()}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={tournament.status}
+            onValueChange={(value) => updateMutation.mutate({ status: value as Tournament['status'] })}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {['setup', 'registration', 'in_progress', 'completed'].map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s.replace('_', ' ')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             size="sm"
@@ -249,7 +248,7 @@ export function TournamentDetailPage() {
       </div>
 
       <Tabs defaultValue="registration">
-        <TabsList className="mb-6">
+        <TabsList>
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="rounds">Rounds</TabsTrigger>
           <TabsTrigger value="standings">Standings</TabsTrigger>
@@ -266,18 +265,6 @@ export function TournamentDetailPage() {
                 </span>
               </CardTitle>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const activeIds = tournament.registrations
-                      .filter(r => !r.withdrawn)
-                      .map(r => typeof r.playerId === 'string' ? r.playerId : r.playerId.id);
-                    bulkCheckInMutation.mutate(activeIds);
-                  }}
-                  disabled={bulkCheckInMutation.isPending}
-                >
-                  Check In All
-                </Button>
                 <Button variant="outline" onClick={() => setShowQRCode(true)}>
                   QR Code
                 </Button>
@@ -294,16 +281,14 @@ export function TournamentDetailPage() {
                 registrations={tournament.registrations}
                 divisions={tournament.divisions}
                 numRounds={tournament.settings.numRounds}
-                onWithdraw={(playerId) => withdrawMutation.mutate(playerId)}
+                rounds={tournament.rounds}
+                tournamentStatus={tournament.status}
                 onChangeDivision={(playerId, divisionId) =>
                   changeDivisionMutation.mutate({ playerId, divisionId })
                 }
-                onSaveRounds={(changes) => saveRoundsMutation.mutate(changes)}
+                onSave={(changes) => saveMutation.mutate(changes)}
                 onDirtyChange={handleDirtyChange}
-                onCheckIn={(playerId, checkedIn) =>
-                  checkInMutation.mutate({ playerId, checkedIn })
-                }
-                isSaving={saveRoundsMutation.isPending}
+                isSaving={saveMutation.isPending}
               />
             </CardContent>
           </Card>
@@ -319,6 +304,7 @@ export function TournamentDetailPage() {
             onUnpairMatch={(roundNumber, boardNumber) =>
               unpairMutation.mutate({ roundNumber, boardNumber })
             }
+            onUnpairAll={(roundNumber) => unpairAllMutation.mutate(roundNumber)}
             onManualPair={(roundNumber, player1Id, player2Id) =>
               manualPairMutation.mutate({ roundNumber, player1Id, player2Id })
             }
@@ -428,7 +414,7 @@ export function TournamentDetailPage() {
           <DialogHeader>
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
-              You have unsaved changes to round participation. Discard changes and leave?
+              You have unsaved changes. Discard changes and leave?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -442,21 +428,6 @@ export function TournamentDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-    setup: 'secondary',
-    registration: 'secondary',
-    in_progress: 'default',
-    completed: 'outline',
-  };
-
-  return (
-    <Badge variant={variants[status] || 'secondary'}>
-      {status.replace('_', ' ')}
-    </Badge>
   );
 }
 
@@ -594,8 +565,6 @@ function TournamentSettings({
     tournament.settings.tiebreakerOrder ?? ['wins', 'sos', 'sds', 'hth']
   );
 
-  const statusOptions = ['setup', 'registration', 'in_progress', 'completed'];
-
   const saveTiebreakers = () => {
     onUpdate({ settings: { ...tournament.settings, tiebreakerOrder: tiebreakerDraft } } as Partial<Tournament>);
     setEditingTiebreakers(false);
@@ -608,25 +577,6 @@ function TournamentSettings({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">Status</label>
-        <Select
-          value={tournament.status}
-          onValueChange={(value) => onUpdate({ status: value as Tournament['status'] })}
-        >
-          <SelectTrigger className="mt-1">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s.replace('_', ' ')}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium">Pairing Algorithm</label>

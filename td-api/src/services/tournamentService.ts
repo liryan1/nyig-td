@@ -306,6 +306,15 @@ export class TournamentService {
     const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
     if (!tournament) return null;
 
+    const isPaired = tournament.rounds.some(
+      (round) =>
+        round.pairings.some((p) => p.blackPlayerId === playerId || p.whitePlayerId === playerId) ||
+        round.byes.some((b) => b.playerId === playerId)
+    );
+    if (isPaired) {
+      throw new Error('Cannot withdraw a player who has already been paired');
+    }
+
     const registrations = tournament.registrations.map((r) =>
       r.playerId === playerId ? { ...r, withdrawn: true } : r
     );
@@ -333,6 +342,44 @@ export class TournamentService {
       if (updates.divisionId !== undefined) {
         updated.divisionId = updates.divisionId;
       }
+      return updated;
+    });
+
+    return prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { registrations },
+    });
+  }
+
+  async bulkUpdateRegistrations(
+    tournamentId: string,
+    updates: Array<{ playerId: string; roundsParticipating?: number[]; checkedIn?: boolean; withdrawn?: boolean }>
+  ) {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return null;
+
+    const updatesMap = new Map(updates.map((u) => [u.playerId, u]));
+
+    // Check that no player being withdrawn has been paired
+    for (const update of updates) {
+      if (!update.withdrawn) continue;
+      const isPaired = tournament.rounds.some(
+        (round) =>
+          round.pairings.some((p) => p.blackPlayerId === update.playerId || p.whitePlayerId === update.playerId) ||
+          round.byes.some((b) => b.playerId === update.playerId)
+      );
+      if (isPaired) {
+        throw new Error('Cannot withdraw a player who has already been paired');
+      }
+    }
+
+    const registrations = tournament.registrations.map((r) => {
+      const update = updatesMap.get(r.playerId);
+      if (!update) return r;
+      const updated = { ...r };
+      if (update.roundsParticipating !== undefined) updated.roundsParticipating = update.roundsParticipating;
+      if (update.checkedIn !== undefined) updated.checkedIn = update.checkedIn;
+      if (update.withdrawn !== undefined) updated.withdrawn = update.withdrawn;
       return updated;
     });
 
@@ -399,6 +446,49 @@ export class TournamentService {
       byes: updatedByes,
       pairedAt: round.pairedAt ?? undefined,
       completedAt: round.completedAt ?? undefined,
+    };
+
+    const updatedRounds = tournament.rounds.map((r, i) =>
+      i === roundIdx ? updatedRound : r
+    );
+
+    await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { rounds: updatedRounds },
+    });
+
+    return updatedRound;
+  }
+
+  async unpairAll(
+    tournamentId: string,
+    roundNumber: number
+  ): Promise<Round> {
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) {
+      throw new Error('Tournament not found');
+    }
+
+    const roundIdx = tournament.rounds.findIndex((r) => r.number === roundNumber);
+    if (roundIdx === -1) {
+      throw new Error(`Round ${roundNumber} not found`);
+    }
+
+    const round = tournament.rounds[roundIdx];
+    if (round.status === 'completed') {
+      throw new Error('Cannot unpair a completed round');
+    }
+
+    const hasResults = round.pairings.some((p) => p.result !== 'NR');
+    if (hasResults) {
+      throw new Error('Cannot unpair all: some matches have recorded results');
+    }
+
+    const updatedRound: Round = {
+      number: round.number,
+      status: 'pending',
+      pairings: [],
+      byes: [],
     };
 
     const updatedRounds = tournament.rounds.map((r, i) =>

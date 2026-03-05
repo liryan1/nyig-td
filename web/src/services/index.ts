@@ -32,6 +32,7 @@ export const bulkRegisterPlayers = api.bulkRegisterPlayers;
 export const withdrawPlayer = api.withdrawPlayer;
 export const updatePlayerRounds = api.updatePlayerRounds;
 export const updateRegistration = api.updateRegistration;
+export const bulkUpdateRegistrations = api.bulkUpdateRegistrations;
 
 export const checkInPlayer = api.checkInPlayer;
 export const bulkCheckInPlayers = api.bulkCheckInPlayers;
@@ -43,6 +44,7 @@ export const removeDivision = api.removeDivision;
 
 export const generatePairings = api.generatePairings;
 export const unpairMatch = api.unpairMatch;
+export const unpairAll = api.unpairAll;
 export const manualPair = api.manualPair;
 export const recordResult = api.recordResult;
 export const publishRound = api.publishRound;

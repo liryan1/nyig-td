@@ -5,6 +5,7 @@ import {
   BulkRegisterDialog,
   validateRows,
   categorizeRows,
+  parseCsvString,
   type CategorizedRow,
 } from '@/components/tournament/BulkRegisterDialog';
 import type { Player } from '@/types';
@@ -132,6 +133,14 @@ describe('categorizeRows', () => {
     expect(result[0].dbName).toBe('Bob Kim');
   });
 
+  it('categorizes name mismatch even if already registered', () => {
+    const players = [{ name: 'A. Chen', agaId: '12345', rank: '5d' }];
+    const result = categorizeRows(players, allPlayers, registeredIds);
+
+    expect(result[0].status).toBe('mismatch');
+    expect(result[0].dbName).toBe('Alice Chen');
+  });
+
   it('handles case-insensitive name matching', () => {
     const players = [{ name: 'bob kim', agaId: '67890', rank: '3d' }];
     const result = categorizeRows(players, allPlayers, registeredIds);
@@ -160,13 +169,13 @@ describe('BulkRegisterDialog', () => {
   it('shows validation errors for invalid CSV', async () => {
     render(<BulkRegisterDialog {...defaultProps} />);
 
-    const file = new File(['name,rank\nJohn,5k'], 'test.csv', { type: 'text/csv' });
+    const file = new File(['name,aga_id,rank\nJohn,,5k'], 'test.csv', { type: 'text/csv' });
     const input = screen.getByTestId('csv-file-input');
 
     await userEvent.upload(input, file);
 
     await waitFor(() => {
-      expect(screen.getByText(/Missing required columns: aga_id/)).toBeInTheDocument();
+      expect(screen.getByText(/missing aga_id/)).toBeInTheDocument();
     });
   });
 
@@ -275,5 +284,100 @@ describe('BulkRegisterDialog', () => {
     await waitFor(() => {
       expect(screen.getByText('Registering...')).toBeInTheDocument();
     });
+  });
+
+  it('renders paste textarea on upload step', () => {
+    render(<BulkRegisterDialog {...defaultProps} />);
+
+    expect(screen.getByTestId('csv-paste-input')).toBeInTheDocument();
+    expect(screen.getByText('Import')).toBeDisabled();
+  });
+
+  it('transitions to confirm step when pasting valid CSV with headers', async () => {
+    render(<BulkRegisterDialog {...defaultProps} />);
+
+    const textarea = screen.getByTestId('csv-paste-input');
+    await userEvent.type(textarea, 'name,aga_id,rank\nNew Player,99999,5k\nBob Kim,67890,3d');
+    await userEvent.click(screen.getByText('Import'));
+
+    await waitFor(() => {
+      expect(screen.getByText('New Player')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('1 new')).toBeInTheDocument();
+    expect(screen.getByText('1 existing')).toBeInTheDocument();
+  });
+
+  it('transitions to confirm step when pasting valid CSV without headers', async () => {
+    render(<BulkRegisterDialog {...defaultProps} />);
+
+    const textarea = screen.getByTestId('csv-paste-input');
+    await userEvent.type(textarea, 'New Player,99999,5k\nBob Kim,67890,3d');
+    await userEvent.click(screen.getByText('Import'));
+
+    await waitFor(() => {
+      expect(screen.getByText('New Player')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('1 new')).toBeInTheDocument();
+    expect(screen.getByText('1 existing')).toBeInTheDocument();
+  });
+
+  it('shows validation errors when pasting invalid CSV', async () => {
+    render(<BulkRegisterDialog {...defaultProps} />);
+
+    const textarea = screen.getByTestId('csv-paste-input');
+    await userEvent.type(textarea, 'John,12345,invalid');
+    await userEvent.click(screen.getByText('Import'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid rank/)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('parseCsvString', () => {
+  it('parses CSV with headers', () => {
+    const result = parseCsvString('name,aga_id,rank\nJohn Doe,12345,5k\nJane Smith,67890,3d');
+
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]).toEqual({ name: 'John Doe', aga_id: '12345', rank: '5k' });
+    expect(result.data[1]).toEqual({ name: 'Jane Smith', aga_id: '67890', rank: '3d' });
+    expect(result.meta.fields).toEqual(['name', 'aga_id', 'rank']);
+  });
+
+  it('parses CSV without headers using positional columns', () => {
+    const result = parseCsvString('John Doe,12345,5k\nJane Smith,67890,3d');
+
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]).toEqual({ name: 'John Doe', aga_id: '12345', rank: '5k' });
+    expect(result.data[1]).toEqual({ name: 'Jane Smith', aga_id: '67890', rank: '3d' });
+    expect(result.meta.fields).toEqual(['name', 'aga_id', 'rank']);
+  });
+
+  it('maps optional positional columns (club, email) without headers', () => {
+    const result = parseCsvString('John Doe,12345,5k,NYC Go,john@x.com');
+
+    expect(result.data[0]).toEqual({
+      name: 'John Doe',
+      aga_id: '12345',
+      rank: '5k',
+      club: 'NYC Go',
+      email: 'john@x.com',
+    });
+    expect(result.meta.fields).toEqual(['name', 'aga_id', 'rank', 'club', 'email']);
+  });
+
+  it('normalizes headers to lowercase', () => {
+    const result = parseCsvString('Name,AGA_ID,Rank\nJohn,12345,5k');
+
+    expect(result.meta.fields).toEqual(['name', 'aga_id', 'rank']);
+    expect(result.data[0]).toEqual({ name: 'John', aga_id: '12345', rank: '5k' });
+  });
+
+  it('skips empty lines', () => {
+    const result = parseCsvString('name,aga_id,rank\nJohn,12345,5k\n\nJane,67890,3d\n');
+
+    expect(result.data).toHaveLength(2);
   });
 });

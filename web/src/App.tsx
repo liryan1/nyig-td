@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { TournamentListPage } from '@/pages/TournamentListPage';
@@ -16,20 +16,29 @@ const queryClient = new QueryClient({
   },
 });
 
+const router = createBrowserRouter([
+  {
+    path: '/tournaments/:id/public',
+    element: <PublicTournamentPage />,
+  },
+  {
+    path: '/tournaments/:id/checkin',
+    element: <CheckInPage />,
+  },
+  {
+    element: <Layout />,
+    children: [
+      { path: '/', element: <TournamentListPage /> },
+      { path: '/tournaments/:id', element: <TournamentDetailPage /> },
+      { path: '/players', element: <PlayerListPage /> },
+    ],
+  },
+]);
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/tournaments/:id/public" element={<PublicTournamentPage />} />
-          <Route path="/tournaments/:id/checkin" element={<CheckInPage />} />
-          <Route element={<Layout />}>
-            <Route path="/" element={<TournamentListPage />} />
-            <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
-            <Route path="/players" element={<PlayerListPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

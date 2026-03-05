@@ -16,17 +16,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PlayerRegistration, Player, Division } from '@/types';
+import type { PlayerRegistration, Player, Division, Round, TournamentStatus } from '@/types';
+
+export type BulkUpdate = {
+  playerId: string;
+  roundsParticipating?: number[];
+  checkedIn?: boolean;
+  withdrawn?: boolean;
+};
 
 interface RegistrationTableProps {
   registrations: PlayerRegistration[];
   divisions?: Division[];
   numRounds?: number;
-  onWithdraw: (playerId: string) => void;
+  rounds?: Round[];
+  tournamentStatus?: TournamentStatus;
   onChangeDivision?: (playerId: string, divisionId: string | null) => void;
-  onSaveRounds?: (changes: Array<{ playerId: string; roundsParticipating: number[] }>) => void;
+  onSave?: (changes: BulkUpdate[]) => void;
   onDirtyChange?: (isDirty: boolean) => void;
-  onCheckIn?: (playerId: string, checkedIn: boolean) => void;
   isSaving?: boolean;
 }
 
@@ -42,19 +49,31 @@ export function RegistrationTable({
   registrations,
   divisions,
   numRounds,
-  onWithdraw,
+  rounds,
+  tournamentStatus,
   onChangeDivision,
-  onSaveRounds,
+  onSave,
   onDirtyChange,
-  onCheckIn,
   isSaving,
 }: RegistrationTableProps) {
   const activeRegistrations = registrations.filter((r) => !r.withdrawn);
   const hasDivisions = divisions && divisions.length > 0;
-  const hasRoundEditing = numRounds != null && numRounds > 0 && onSaveRounds;
+  const hasRoundEditing = numRounds != null && numRounds > 0 && onSave;
+
+  const pairedPlayerIds = new Set(
+    (rounds ?? []).flatMap((round) => [
+      ...round.pairings.flatMap((p) => [p.blackPlayerId, p.whitePlayerId]),
+      ...round.byes.map((b) => b.playerId),
+    ])
+  );
+
+  const checkInDisabled = tournamentStatus != null && tournamentStatus !== 'registration';
 
   const [roundOverrides, setRoundOverrides] = useState<Map<string, number[]>>(new Map());
-  const isDirty = roundOverrides.size > 0;
+  const [checkInOverrides, setCheckInOverrides] = useState<Map<string, boolean>>(new Map());
+  const [withdrawOverrides, setWithdrawOverrides] = useState<Set<string>>(new Set());
+
+  const isDirty = roundOverrides.size > 0 || checkInOverrides.size > 0 || withdrawOverrides.size > 0;
 
   // Notify parent of dirty state changes
   useEffect(() => {
@@ -62,15 +81,17 @@ export function RegistrationTable({
   }, [isDirty, onDirtyChange]);
 
   // Clear overrides when server data changes (after successful save)
-  const serverFingerprint = activeRegistrations
+  const serverFingerprint = registrations
     .map((r) => {
       const pid = typeof r.playerId === 'string' ? r.playerId : r.playerId.id;
-      return `${pid}:${r.roundsParticipating.join(',')}`;
+      return `${pid}:${r.roundsParticipating.join(',')}:${r.checkedIn ? '1' : '0'}:${r.withdrawn ? '1' : '0'}`;
     })
     .join('|');
 
   useEffect(() => {
     setRoundOverrides(new Map());
+    setCheckInOverrides(new Map());
+    setWithdrawOverrides(new Set());
   }, [serverFingerprint]);
 
   // beforeunload warning when dirty
@@ -112,20 +133,84 @@ export function RegistrationTable({
     []
   );
 
+  const toggleCheckIn = useCallback(
+    (playerId: string, serverCheckedIn: boolean) => {
+      setCheckInOverrides((prev) => {
+        const next = new Map(prev);
+        const current = next.has(playerId) ? next.get(playerId)! : serverCheckedIn;
+        const newValue = !current;
+        // If toggling back to server state, remove override
+        if (newValue === serverCheckedIn) {
+          next.delete(playerId);
+        } else {
+          next.set(playerId, newValue);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const toggleWithdraw = useCallback(
+    (playerId: string) => {
+      setWithdrawOverrides((prev) => {
+        const next = new Set(prev);
+        if (next.has(playerId)) {
+          next.delete(playerId);
+        } else {
+          next.add(playerId);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
   const handleSave = () => {
-    if (!onSaveRounds) return;
-    const changes = Array.from(roundOverrides.entries()).map(([playerId, roundsParticipating]) => ({
-      playerId,
-      roundsParticipating,
-    }));
-    onSaveRounds(changes);
+    if (!onSave) return;
+    const changes: BulkUpdate[] = [];
+
+    // Collect round overrides
+    for (const [playerId, roundsParticipating] of roundOverrides) {
+      changes.push({ playerId, roundsParticipating });
+    }
+
+    // Collect check-in overrides
+    for (const [playerId, checkedIn] of checkInOverrides) {
+      const existing = changes.find((c) => c.playerId === playerId);
+      if (existing) {
+        existing.checkedIn = checkedIn;
+      } else {
+        changes.push({ playerId, checkedIn });
+      }
+    }
+
+    // Collect withdraw overrides
+    for (const playerId of withdrawOverrides) {
+      const existing = changes.find((c) => c.playerId === playerId);
+      if (existing) {
+        existing.withdrawn = true;
+      } else {
+        changes.push({ playerId, withdrawn: true });
+      }
+    }
+
+    onSave(changes);
   };
 
   const handleDiscard = () => {
     setRoundOverrides(new Map());
+    setCheckInOverrides(new Map());
+    setWithdrawOverrides(new Set());
   };
 
-  if (activeRegistrations.length === 0) {
+  // Filter out players pending withdrawal for display
+  const visibleRegistrations = activeRegistrations.filter((r) => {
+    const playerId = typeof r.playerId === 'string' ? r.playerId : (r.playerId as Player).id;
+    return !withdrawOverrides.has(playerId);
+  });
+
+  if (visibleRegistrations.length === 0 && withdrawOverrides.size === 0) {
     return <p className="text-muted-foreground">No players registered yet.</p>;
   }
 
@@ -138,7 +223,7 @@ export function RegistrationTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {onCheckIn && <TableHead className="w-20">Check-In</TableHead>}
+            {onSave && <TableHead className="w-20">Check-In</TableHead>}
             <TableHead>Name</TableHead>
             <TableHead>Rank</TableHead>
             <TableHead>Club</TableHead>
@@ -148,23 +233,27 @@ export function RegistrationTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {activeRegistrations.map((reg) => {
+          {visibleRegistrations.map((reg) => {
             const player = reg.playerId as Player;
             const playerId = typeof reg.playerId === 'string' ? reg.playerId : player.id;
             const serverRounds = reg.roundsParticipating;
             const effectiveRounds = roundOverrides.has(playerId)
               ? roundOverrides.get(playerId)!
               : serverRounds;
+            const effectiveCheckedIn = checkInOverrides.has(playerId)
+              ? checkInOverrides.get(playerId)!
+              : reg.checkedIn;
 
             return (
               <TableRow key={playerId}>
-                {onCheckIn && (
+                {onSave && (
                   <TableCell>
                     <Checkbox
-                      checked={reg.checkedIn}
-                      onCheckedChange={(checked) =>
-                        onCheckIn(playerId, checked === true)
+                      checked={effectiveCheckedIn}
+                      onCheckedChange={() =>
+                        toggleCheckIn(playerId, reg.checkedIn)
                       }
+                      disabled={reg.checkedIn && (isSaving || checkInDisabled)}
                       aria-label={`Check in ${typeof player === 'string' ? playerId : player.name}`}
                     />
                   </TableCell>
@@ -242,7 +331,9 @@ export function RegistrationTable({
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => onWithdraw(playerId)}
+                    onClick={() => toggleWithdraw(playerId)}
+                    disabled={isSaving || pairedPlayerIds.has(playerId)}
+                    title={pairedPlayerIds.has(playerId) ? 'Cannot withdraw a player who has already been paired' : undefined}
                   >
                     Withdraw
                   </Button>
@@ -253,7 +344,13 @@ export function RegistrationTable({
         </TableBody>
       </Table>
 
-      {hasRoundEditing && isDirty && (
+      {withdrawOverrides.size > 0 && (
+        <p className="text-sm text-muted-foreground mt-2">
+          {withdrawOverrides.size} player{withdrawOverrides.size > 1 ? 's' : ''} pending withdrawal
+        </p>
+      )}
+
+      {isDirty && (
         <div className="sticky bottom-0 bg-background border-t p-4 flex items-center justify-end gap-2 mt-2">
           <Button variant="outline" onClick={handleDiscard} disabled={isSaving}>
             Discard

@@ -171,20 +171,19 @@ class StandingsCalculator:
                 if bye.player_id in player_stats:
                     player_stats[bye.player_id]["wins"] += bye.points
 
-        # Calculate SOS and SDS using MMS (initial_mms + wins)
+        # Calculate SOS and SDS using wins only
         for player_id, stats in player_stats.items():
-            # SOS: Sum of opponents' scores (MMS for McMahon, wins for Swiss)
+            # SOS: Sum of opponents' wins (excludes McMahon initial scores)
             sos = sum(
-                player_stats[opp]["initial_mms"] + player_stats[opp]["wins"]
+                player_stats[opp]["wins"]
                 for opp in stats["opponents"]
                 if opp in player_stats
             )
             stats["sos"] = sos
 
-            # Note: SDS (SODOS) in McMahon is scale-dependent — results vary
-            # based on the MMS origin point. Use SOS as preferred tiebreaker.
+            # SDS (SODOS): Sum of defeated opponents' wins
             sds = sum(
-                player_stats[opp]["initial_mms"] + player_stats[opp]["wins"]
+                player_stats[opp]["wins"]
                 for opp in stats["defeated"]
                 if opp in player_stats
             )

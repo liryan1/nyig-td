@@ -54,6 +54,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -72,6 +73,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -81,7 +83,7 @@ describe('RoundManager', () => {
     expect(screen.getByText('Bob Kim')).toBeInTheDocument();
   });
 
-  it('shows Generate Pairings button for pending round', () => {
+  it('shows Pair all players button for pending round', () => {
     const tournament = makeTournament();
     render(
       <RoundManager
@@ -89,11 +91,12 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
     );
-    expect(screen.getByText('Generate Pairings')).toBeInTheDocument();
+    expect(screen.getByText('Pair all players')).toBeInTheDocument();
   });
 
   it('calls onGeneratePairings when button clicked', async () => {
@@ -107,12 +110,13 @@ describe('RoundManager', () => {
         onGeneratePairings={onGenerate}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
     );
 
-    await user.click(screen.getByText('Generate Pairings'));
+    await user.click(screen.getByText('Pair all players'));
     expect(onGenerate).toHaveBeenCalledWith(1);
   });
 
@@ -124,6 +128,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={true}
       />
@@ -155,6 +160,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -190,6 +196,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -227,6 +234,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -260,6 +268,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -283,6 +292,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -311,6 +321,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={onManualPair}
         isPairing={false}
       />
@@ -324,7 +335,7 @@ describe('RoundManager', () => {
     expect(onManualPair).toHaveBeenCalledWith(1, 'p1', 'p2');
   });
 
-  it('disables Generate Pairings and shows hint when previous round is not completed', async () => {
+  it('disables Pair all players and shows hint when previous round is not completed', async () => {
     const user = userEvent.setup();
     const tournament = makeTournament({
       rounds: [
@@ -347,6 +358,7 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
@@ -355,8 +367,8 @@ describe('RoundManager', () => {
     // Switch to Round 2
     await user.click(screen.getByText('Round 2'));
 
-    // Generate Pairings button should be disabled
-    const generateBtn = screen.getByText('Generate Pairings');
+    // Pair all players button should be disabled
+    const generateBtn = screen.getByText('Pair all players');
     expect(generateBtn).toBeDisabled();
 
     // Hint message should be visible
@@ -385,11 +397,110 @@ describe('RoundManager', () => {
         onGeneratePairings={noop}
         onRecordResult={noop}
         onUnpairMatch={noop}
+        onUnpairAll={noop}
         onManualPair={noop}
         isPairing={false}
       />
     );
 
     expect(screen.getByText('Pair Remaining')).toBeInTheDocument();
+  });
+
+  it('shows Unpair All button when round has pairings with no results', () => {
+    const tournament = makeTournament({
+      rounds: [
+        {
+          number: 1,
+          status: 'paired',
+          pairings: [
+            { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 6.5, result: 'no_result' },
+            { blackPlayerId: 'p3', whitePlayerId: 'p4', boardNumber: 2, handicapStones: 0, komi: 6.5, result: 'no_result' },
+          ],
+          byes: [],
+        },
+        { number: 2, status: 'pending', pairings: [], byes: [] },
+        { number: 3, status: 'pending', pairings: [], byes: [] },
+      ],
+    });
+
+    render(
+      <RoundManager
+        tournament={tournament}
+        onGeneratePairings={noop}
+        onRecordResult={noop}
+        onUnpairMatch={noop}
+        onUnpairAll={noop}
+        onManualPair={noop}
+        isPairing={false}
+      />
+    );
+
+    expect(screen.getByText('Unpair All')).toBeInTheDocument();
+  });
+
+  it('hides Unpair All button when any pairing has a result', () => {
+    const tournament = makeTournament({
+      rounds: [
+        {
+          number: 1,
+          status: 'paired',
+          pairings: [
+            { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 6.5, result: 'black_wins' },
+            { blackPlayerId: 'p3', whitePlayerId: 'p4', boardNumber: 2, handicapStones: 0, komi: 6.5, result: 'no_result' },
+          ],
+          byes: [],
+        },
+        { number: 2, status: 'pending', pairings: [], byes: [] },
+        { number: 3, status: 'pending', pairings: [], byes: [] },
+      ],
+    });
+
+    render(
+      <RoundManager
+        tournament={tournament}
+        onGeneratePairings={noop}
+        onRecordResult={noop}
+        onUnpairMatch={noop}
+        onUnpairAll={noop}
+        onManualPair={noop}
+        isPairing={false}
+      />
+    );
+
+    expect(screen.queryByText('Unpair All')).not.toBeInTheDocument();
+  });
+
+  it('calls onUnpairAll when Unpair All button clicked', async () => {
+    const onUnpairAll = vi.fn();
+    const user = userEvent.setup();
+    const tournament = makeTournament({
+      rounds: [
+        {
+          number: 1,
+          status: 'paired',
+          pairings: [
+            { blackPlayerId: 'p1', whitePlayerId: 'p2', boardNumber: 1, handicapStones: 0, komi: 6.5, result: 'no_result' },
+          ],
+          byes: [],
+        },
+        { number: 2, status: 'pending', pairings: [], byes: [] },
+        { number: 3, status: 'pending', pairings: [], byes: [] },
+      ],
+    });
+
+    render(
+      <RoundManager
+        tournament={tournament}
+        onGeneratePairings={noop}
+        onRecordResult={noop}
+        onUnpairMatch={noop}
+        onUnpairAll={onUnpairAll}
+        onManualPair={noop}
+        isPairing={false}
+      />
+    );
+
+    await user.click(screen.getByText('Unpair All'));
+    expect(onUnpairAll).toHaveBeenCalledWith(1);
   });
 });

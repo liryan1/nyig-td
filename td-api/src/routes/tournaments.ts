@@ -14,6 +14,7 @@ import {
   checkInSchema,
   selfCheckInSchema,
   bulkCheckInSchema,
+  bulkUpdateRegistrationsSchema,
 } from '../utils/validation.js';
 import type { GameResult } from '../types/index.js';
 
@@ -161,6 +162,30 @@ router.delete('/:id/registrations/:playerId', async (req, res, next) => {
     }
     res.json({ tournament });
   } catch (error) {
+    if (error instanceof Error && error.message.includes('already been paired')) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    next(error);
+  }
+});
+
+// Bulk update registrations (rounds)
+router.patch('/:id/registrations/bulk', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const data = bulkUpdateRegistrationsSchema.parse(req.body);
+    const tournament = await tournamentService.bulkUpdateRegistrations(id, data.updates);
+    if (!tournament) {
+      res.status(404).json({ error: 'Tournament not found' });
+      return;
+    }
+    res.json({ tournament });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('already been paired')) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     next(error);
   }
 });
@@ -314,6 +339,18 @@ router.patch('/:id/rounds/:roundNumber/publish', async (req, res, next) => {
       return;
     }
     res.json({ tournament });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Unpair all
+router.delete('/:id/rounds/:roundNumber/pairings', async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    const roundNumber = parseInt(String(req.params.roundNumber), 10);
+    const round = await tournamentService.unpairAll(id, roundNumber);
+    res.json({ round });
   } catch (error) {
     next(error);
   }

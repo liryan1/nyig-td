@@ -11,9 +11,56 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Backend uses Go notation ('B+', 'W+', 'NR'), frontend uses descriptive names ('black_wins', etc.)
+const RESULT_TO_BACKEND: Record<GameResult, string> = {
+  black_wins: 'B+',
+  white_wins: 'W+',
+  black_forfeit: 'B+F',
+  white_forfeit: 'W+F',
+  draw: 'Draw',
+  no_result: 'NR',
+  double_forfeit: 'BL',
+};
+
+const RESULT_FROM_BACKEND: Record<string, GameResult> = Object.fromEntries(
+  Object.entries(RESULT_TO_BACKEND).map(([k, v]) => [v, k as GameResult])
+) as Record<string, GameResult>;
+
+function convertTournamentResults(tournament: Tournament): Tournament {
+  return {
+    ...tournament,
+    rounds: tournament.rounds.map(convertRoundResults),
+  };
+}
+
+function convertRoundResults(round: Round): Round {
+  return {
+    ...round,
+    pairings: round.pairings.map((p) => ({
+      ...p,
+      result: (RESULT_FROM_BACKEND[p.result] ?? p.result) as GameResult,
+    })),
+  };
+}
+
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+});
+
+// Convert backend result format to frontend format in all responses
+api.interceptors.response.use((response) => {
+  const data = response.data;
+  if (data?.tournament) {
+    data.tournament = convertTournamentResults(data.tournament);
+  }
+  if (data?.tournaments) {
+    data.tournaments = data.tournaments.map(convertTournamentResults);
+  }
+  if (data?.round) {
+    data.round = convertRoundResults(data.round);
+  }
+  return response;
 });
 
 // ========== Players ==========
@@ -110,6 +157,17 @@ export async function updateRegistration(
   return response.data.tournament;
 }
 
+export async function bulkUpdateRegistrations(
+  tournamentId: string,
+  updates: Array<{ playerId: string; roundsParticipating?: number[]; checkedIn?: boolean; withdrawn?: boolean }>
+): Promise<Tournament> {
+  const response = await api.patch<{ tournament: Tournament }>(
+    `/tournaments/${tournamentId}/registrations/bulk`,
+    { updates }
+  );
+  return response.data.tournament;
+}
+
 export async function withdrawPlayer(tournamentId: string, playerId: string): Promise<Tournament> {
   const response = await api.delete<{ tournament: Tournament }>(
     `/tournaments/${tournamentId}/registrations/${playerId}`
@@ -148,6 +206,16 @@ export async function unpairMatch(
   return response.data.round;
 }
 
+export async function unpairAll(
+  tournamentId: string,
+  roundNumber: number
+): Promise<Round> {
+  const response = await api.delete<{ round: Round }>(
+    `/tournaments/${tournamentId}/rounds/${roundNumber}/pairings`
+  );
+  return response.data.round;
+}
+
 export async function manualPair(
   tournamentId: string,
   roundNumber: number,
@@ -169,7 +237,7 @@ export async function recordResult(
 ): Promise<Tournament> {
   const response = await api.patch<{ tournament: Tournament }>(
     `/tournaments/${tournamentId}/rounds/${roundNumber}/boards/${boardNumber}`,
-    { result }
+    { result: RESULT_TO_BACKEND[result] ?? result }
   );
   return response.data.tournament;
 }

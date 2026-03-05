@@ -13,11 +13,13 @@ import {
   registerPlayer,
   withdrawPlayer,
   updatePlayerRounds,
+  bulkUpdateRegistrations,
   addDivision,
   updateDivision,
   removeDivision,
   generatePairings,
   unpairMatch,
+  unpairAll,
   manualPair,
   recordResult,
   getStandings,
@@ -258,11 +260,15 @@ describe('registerPlayer', () => {
 
 describe('withdrawPlayer', () => {
   it('marks registration as withdrawn', async () => {
-    const t = await withdrawPlayer('t1', 'p1');
+    const t = await withdrawPlayer('t2', 'p7');
     const reg = t.registrations.find(
-      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p7'
     );
     expect(reg!.withdrawn).toBe(true);
+  });
+
+  it('throws for paired player', async () => {
+    await expect(withdrawPlayer('t1', 'p1')).rejects.toThrow('already been paired');
   });
 
   it('throws for unregistered player', async () => {
@@ -281,6 +287,67 @@ describe('updatePlayerRounds', () => {
 
   it('throws for unregistered player', async () => {
     await expect(updatePlayerRounds('t1', 'p15', [1])).rejects.toThrow('Player not registered');
+  });
+});
+
+// ========== Bulk Update Registrations ==========
+
+describe('bulkUpdateRegistrations', () => {
+  it('updates roundsParticipating', async () => {
+    const t = await bulkUpdateRegistrations('t1', [
+      { playerId: 'p1', roundsParticipating: [1, 3] },
+    ]);
+    const reg = t.registrations.find(
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
+    );
+    expect(reg!.roundsParticipating).toEqual([1, 3]);
+  });
+
+  it('updates checkedIn', async () => {
+    const t = await bulkUpdateRegistrations('t1', [
+      { playerId: 'p1', checkedIn: true },
+    ]);
+    const reg = t.registrations.find(
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p1'
+    );
+    expect(reg!.checkedIn).toBe(true);
+  });
+
+  it('updates withdrawn', async () => {
+    const t = await bulkUpdateRegistrations('t2', [
+      { playerId: 'p7', withdrawn: true },
+    ]);
+    const reg = t.registrations.find(
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p7'
+    );
+    expect(reg!.withdrawn).toBe(true);
+  });
+
+  it('throws when withdrawing paired player', async () => {
+    await expect(
+      bulkUpdateRegistrations('t1', [{ playerId: 'p1', withdrawn: true }])
+    ).rejects.toThrow('already been paired');
+  });
+
+  it('updates multiple fields at once', async () => {
+    const t = await bulkUpdateRegistrations('t2', [
+      { playerId: 'p7', checkedIn: true, roundsParticipating: [1, 2] },
+      { playerId: 'p8', withdrawn: true },
+    ]);
+    const reg1 = t.registrations.find(
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p7'
+    );
+    expect(reg1!.checkedIn).toBe(true);
+    expect(reg1!.roundsParticipating).toEqual([1, 2]);
+
+    const reg2 = t.registrations.find(
+      (r) => (typeof r.playerId === 'string' ? r.playerId : r.playerId.id) === 'p8'
+    );
+    expect(reg2!.withdrawn).toBe(true);
+  });
+
+  it('throws for unknown tournament', async () => {
+    await expect(bulkUpdateRegistrations('unknown', [{ playerId: 'p1', checkedIn: true }])).rejects.toThrow('Tournament not found');
   });
 });
 
@@ -356,10 +423,10 @@ describe('generatePairings', () => {
   });
 
   it('assigns bye for odd number of players', async () => {
-    // Withdraw one player to get 13 active
-    await withdrawPlayer('t1', 'p6');
-    const round = await generatePairings('t1', 3);
-    expect(round.pairings.length).toBe(6);
+    // t2 has 6 players; register one more to get 7 (odd)
+    await registerPlayer('t2', 'p1');
+    const round = await generatePairings('t2', 1);
+    expect(round.pairings.length).toBe(3);
     expect(round.byes.length).toBe(1);
   });
 
@@ -412,6 +479,19 @@ describe('unpairMatch', () => {
 
   it('throws for completed round', async () => {
     await expect(unpairMatch('t1', 1, 1)).rejects.toThrow('Cannot unpair a completed round');
+  });
+});
+
+describe('unpairAll', () => {
+  it('removes all pairings and byes from a round', async () => {
+    const round = await unpairAll('t1', 2);
+    expect(round.pairings).toHaveLength(0);
+    expect(round.byes).toHaveLength(0);
+    expect(round.status).toBe('pending');
+  });
+
+  it('throws for completed round', async () => {
+    await expect(unpairAll('t1', 1)).rejects.toThrow('Cannot unpair a completed round');
   });
 });
 

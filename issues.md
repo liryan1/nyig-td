@@ -4,7 +4,8 @@ See README.md for acronym definitions.
 
 ## Features
 
-- Support slide and Fold pairing format. TD can change this after tournament creation.
+- Create rank enums ranges 1d-9d and 1k-25k, rank uses search select, CSV upload validates rank
+- Support slide and fold pairing format (swiss only?). TD can change this after tournament creation
 
 ## Done
 
@@ -21,3 +22,12 @@ See README.md for acronym definitions.
 - [x] Show pairing page - public link to players. TD can publish/unpublish pairings.
 - [x] Scan QR code or visit link for players to checkin. Allow TD to checkin one player and bulk check-in multiple players. Only checked in players can be paired
 - [x] Deep dive mcmahon pairings with the links https://en.wikipedia.org/wiki/McMahon_system_tournament, https://senseis.xmp.net/?McMahonPairing, https://www.gokgs.com/help/tournMcMahon.html, https://www.britgo.org/organisers/mcmahonpairing.html. Then evaluate the current mcmahon pairing logic in lib.
+- [x] Fix round checkbox and save feature only working for the first player checked, the second and thereafter are not being persisted
+- [x] Make check in and withdraw in tournament registration page similar to round checkin: persist via bulk updates and only call the API after TD presses save
+- [x] Disable withdraw in API and button if player has already been paired; If tournament is not in "registration" phase, checkin checkboxes are disabled
+- [x] Show warning icon for high handicap >= 4; show warning if TD paired and tournament status is "setup" or "registration"
+- [x] Near copy tournament link, move tournament status change here
+
+## Bugs
+
+- [x] SOS and SODOS calculations are wrong. After round 1, all SDS and SOS should both be 0 since players' opponents did not win any games. Root cause the problem. Tournament object:

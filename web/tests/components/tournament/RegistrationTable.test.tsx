@@ -25,13 +25,13 @@ const player2: Player = {
 };
 
 const registrations: PlayerRegistration[] = [
-  { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
-  { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
+  { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+  { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
 ];
 
 describe('RegistrationTable', () => {
   it('renders player names and ranks', () => {
-    render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={registrations} />);
     expect(screen.getByText('Alice Chen')).toBeInTheDocument();
     expect(screen.getByText('Bob Kim')).toBeInTheDocument();
     expect(screen.getByText('5d')).toBeInTheDocument();
@@ -39,48 +39,60 @@ describe('RegistrationTable', () => {
   });
 
   it('renders clubs', () => {
-    render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={registrations} />);
     expect(screen.getByText('NYC Go Club')).toBeInTheDocument();
     expect(screen.getByText('Brooklyn Go')).toBeInTheDocument();
   });
 
   it('shows "All" for empty roundsParticipating when no numRounds', () => {
-    render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={registrations} />);
     expect(screen.getByText('All')).toBeInTheDocument();
   });
 
   it('shows specific rounds as text when no numRounds', () => {
-    render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={registrations} />);
     expect(screen.getByText('1, 3')).toBeInTheDocument();
   });
 
   it('hides withdrawn players', () => {
     const regs: PlayerRegistration[] = [
-      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: true },
-      { playerId: player2, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
+      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: true, checkedIn: false },
+      { playerId: player2, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
     ];
-    render(<RegistrationTable registrations={regs} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={regs} />);
     expect(screen.queryByText('Alice Chen')).not.toBeInTheDocument();
     expect(screen.getByText('Bob Kim')).toBeInTheDocument();
   });
 
   it('shows empty message when no active registrations', () => {
-    render(<RegistrationTable registrations={[]} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={[]} />);
     expect(screen.getByText('No players registered yet.')).toBeInTheDocument();
   });
 
-  it('calls onWithdraw when button clicked', async () => {
-    const onWithdraw = vi.fn();
+  it('withdraw button hides player and shows pending withdrawal message', async () => {
     const user = userEvent.setup();
-    render(<RegistrationTable registrations={registrations} onWithdraw={onWithdraw} />);
+    render(
+      <RegistrationTable
+        registrations={registrations}
+        numRounds={4}
+        onSave={() => {}}
+      />
+    );
 
     const buttons = screen.getAllByText('Withdraw');
     await user.click(buttons[0]);
-    expect(onWithdraw).toHaveBeenCalledWith('p1');
+
+    // Alice should be hidden
+    expect(screen.queryByText('Alice Chen')).not.toBeInTheDocument();
+    expect(screen.getByText('Bob Kim')).toBeInTheDocument();
+    // Pending withdrawal message
+    expect(screen.getByText('1 player pending withdrawal')).toBeInTheDocument();
+    // Save bar should appear
+    expect(screen.getByText('Save Changes')).toBeInTheDocument();
   });
 
   it('does not show division column when no divisions', () => {
-    render(<RegistrationTable registrations={registrations} onWithdraw={() => {}} />);
+    render(<RegistrationTable registrations={registrations} />);
     expect(screen.queryByText('Division')).not.toBeInTheDocument();
   });
 
@@ -93,16 +105,18 @@ describe('RegistrationTable', () => {
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
       {
         playerId: player2,
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
     ];
     render(
-      <RegistrationTable registrations={regsWithDiv} divisions={divisions} onWithdraw={() => {}} />
+      <RegistrationTable registrations={regsWithDiv} divisions={divisions} />
     );
     expect(screen.getByText('Division')).toBeInTheDocument();
     expect(screen.getByText('Open')).toBeInTheDocument();
@@ -123,19 +137,20 @@ describe('RegistrationTable', () => {
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
       {
         playerId: player2,
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
     ];
     render(
       <RegistrationTable
         registrations={regsWithDiv}
         divisions={divisions}
-        onWithdraw={() => {}}
         onChangeDivision={() => {}}
       />
     );
@@ -157,13 +172,13 @@ describe('RegistrationTable', () => {
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
     ];
     render(
       <RegistrationTable
         registrations={regsWithDiv}
         divisions={divisions}
-        onWithdraw={() => {}}
         onChangeDivision={onChangeDivision}
       />
     );
@@ -190,13 +205,13 @@ describe('RegistrationTable', () => {
         roundsParticipating: [],
         registeredAt: '2024-01-01T00:00:00Z',
         withdrawn: false,
+        checkedIn: false,
       },
     ];
     render(
       <RegistrationTable
         registrations={regsWithDiv}
         divisions={divisions}
-        onWithdraw={() => {}}
         onChangeDivision={onChangeDivision}
       />
     );
@@ -210,19 +225,143 @@ describe('RegistrationTable', () => {
     expect(onChangeDivision).toHaveBeenCalledWith('p1', null);
   });
 
-  describe('round checkboxes', () => {
-    const allRoundsRegs: PlayerRegistration[] = [
-      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
-      { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false },
+  describe('check-in', () => {
+    const checkInRegs: PlayerRegistration[] = [
+      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+      { playerId: player2, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: true },
     ];
 
-    it('renders round checkboxes when numRounds and onSaveRounds are provided', () => {
+    it('renders check-in checkboxes when onSave is provided', () => {
+      render(
+        <RegistrationTable
+          registrations={checkInRegs}
+          numRounds={4}
+          onSave={() => {}}
+        />
+      );
+      const aliceCheckIn = screen.getByRole('checkbox', { name: 'Check in Alice Chen' });
+      const bobCheckIn = screen.getByRole('checkbox', { name: 'Check in Bob Kim' });
+      expect(aliceCheckIn).not.toBeChecked();
+      expect(bobCheckIn).toBeChecked();
+    });
+
+    it('toggling check-in updates locally and shows save bar', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={checkInRegs}
+          numRounds={4}
+          onSave={() => {}}
+        />
+      );
+
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+
+      const aliceCheckIn = screen.getByRole('checkbox', { name: 'Check in Alice Chen' });
+      await user.click(aliceCheckIn);
+
+      // Should be checked now (local override)
+      expect(aliceCheckIn).toBeChecked();
+      // Save bar should appear
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+    });
+
+    it('toggling check-in back to server state removes override', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={checkInRegs}
+          numRounds={4}
+          onSave={() => {}}
+        />
+      );
+
+      const aliceCheckIn = screen.getByRole('checkbox', { name: 'Check in Alice Chen' });
+      await user.click(aliceCheckIn); // check
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+      await user.click(aliceCheckIn); // uncheck back to server state
+
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+    });
+
+    it('includes check-in changes in onSave payload', async () => {
+      const onSave = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={checkInRegs}
+          numRounds={4}
+          onSave={onSave}
+        />
+      );
+
+      const aliceCheckIn = screen.getByRole('checkbox', { name: 'Check in Alice Chen' });
+      await user.click(aliceCheckIn);
+
+      await user.click(screen.getByText('Save Changes'));
+
+      expect(onSave).toHaveBeenCalledWith([
+        { playerId: 'p1', checkedIn: true },
+      ]);
+    });
+  });
+
+  describe('withdraw', () => {
+    it('discard restores withdrawn player', async () => {
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={registrations}
+          numRounds={4}
+          onSave={() => {}}
+        />
+      );
+
+      // Withdraw Alice
+      const buttons = screen.getAllByText('Withdraw');
+      await user.click(buttons[0]);
+      expect(screen.queryByText('Alice Chen')).not.toBeInTheDocument();
+
+      // Discard
+      await user.click(screen.getByText('Discard'));
+      expect(screen.getByText('Alice Chen')).toBeInTheDocument();
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+    });
+
+    it('includes withdraw in onSave payload', async () => {
+      const onSave = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <RegistrationTable
+          registrations={registrations}
+          numRounds={4}
+          onSave={onSave}
+        />
+      );
+
+      const buttons = screen.getAllByText('Withdraw');
+      await user.click(buttons[0]);
+
+      await user.click(screen.getByText('Save Changes'));
+
+      expect(onSave).toHaveBeenCalledWith([
+        { playerId: 'p1', withdrawn: true },
+      ]);
+    });
+  });
+
+  describe('round checkboxes', () => {
+    const allRoundsRegs: PlayerRegistration[] = [
+      { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+      { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+    ];
+
+    it('renders round checkboxes when numRounds and onSave are provided', () => {
       render(
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
         />
       );
       // Alice has all rounds (roundsParticipating=[]), all 4 checkboxes should be checked
@@ -248,8 +387,7 @@ describe('RegistrationTable', () => {
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
         />
       );
 
@@ -271,8 +409,7 @@ describe('RegistrationTable', () => {
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
         />
       );
 
@@ -290,15 +427,14 @@ describe('RegistrationTable', () => {
       expect(aliceR4).toBeChecked();
     });
 
-    it('calls onSaveRounds with correct data when Save Changes is clicked', async () => {
-      const onSaveRounds = vi.fn();
+    it('calls onSave with correct data when Save Changes is clicked', async () => {
+      const onSave = vi.fn();
       const user = userEvent.setup();
       render(
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={onSaveRounds}
+          onSave={onSave}
         />
       );
 
@@ -309,7 +445,7 @@ describe('RegistrationTable', () => {
       // Click save
       await user.click(screen.getByText('Save Changes'));
 
-      expect(onSaveRounds).toHaveBeenCalledWith([
+      expect(onSave).toHaveBeenCalledWith([
         { playerId: 'p1', roundsParticipating: [1, 2, 3] },
       ]);
     });
@@ -320,8 +456,7 @@ describe('RegistrationTable', () => {
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
         />
       );
 
@@ -342,8 +477,7 @@ describe('RegistrationTable', () => {
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
           onDirtyChange={onDirtyChange}
         />
       );
@@ -362,14 +496,55 @@ describe('RegistrationTable', () => {
         <RegistrationTable
           registrations={allRoundsRegs}
           numRounds={4}
-          onWithdraw={() => {}}
-          onSaveRounds={() => {}}
+          onSave={() => {}}
           isSaving={true}
         />
       );
 
       const aliceR1 = screen.getByRole('checkbox', { name: 'R1 for Alice Chen' });
       expect(aliceR1).toBeDisabled();
+    });
+  });
+
+  describe('combined changes', () => {
+    it('saves round, check-in, and withdraw changes together', async () => {
+      const onSave = vi.fn();
+      const user = userEvent.setup();
+      const regs: PlayerRegistration[] = [
+        { playerId: player1, roundsParticipating: [], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+        { playerId: player2, roundsParticipating: [1, 3], registeredAt: '2024-01-01T00:00:00Z', withdrawn: false, checkedIn: false },
+      ];
+      render(
+        <RegistrationTable
+          registrations={regs}
+          numRounds={4}
+          onSave={onSave}
+        />
+      );
+
+      // Check in Alice
+      const aliceCheckIn = screen.getByRole('checkbox', { name: 'Check in Alice Chen' });
+      await user.click(aliceCheckIn);
+
+      // Uncheck R4 for Alice
+      const aliceR4 = screen.getByRole('checkbox', { name: 'R4 for Alice Chen' });
+      await user.click(aliceR4);
+
+      // Withdraw Bob
+      const withdrawButtons = screen.getAllByText('Withdraw');
+      await user.click(withdrawButtons[1]); // Bob is second
+
+      // Save
+      await user.click(screen.getByText('Save Changes'));
+
+      const calls = onSave.mock.calls[0][0];
+      expect(calls).toHaveLength(2);
+
+      const aliceUpdate = calls.find((c: { playerId: string }) => c.playerId === 'p1');
+      expect(aliceUpdate).toEqual({ playerId: 'p1', roundsParticipating: [1, 2, 3], checkedIn: true });
+
+      const bobUpdate = calls.find((c: { playerId: string }) => c.playerId === 'p2');
+      expect(bobUpdate).toEqual({ playerId: 'p2', withdrawn: true });
     });
   });
 });

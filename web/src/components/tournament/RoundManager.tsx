@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { TriangleAlert } from 'lucide-react';
+import { WarningAlert } from '@/components/WarningAlert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +28,7 @@ interface RoundManagerProps {
   onGeneratePairings: (roundNumber: number) => void;
   onRecordResult: (roundNumber: number, boardNumber: number, result: GameResult) => void;
   onUnpairMatch: (roundNumber: number, boardNumber: number) => void;
+  onUnpairAll: (roundNumber: number) => void;
   onManualPair: (roundNumber: number, player1Id: string, player2Id: string) => void;
   onPublishRound?: (roundNumber: number, published: boolean) => void;
   isPairing: boolean;
@@ -36,6 +39,7 @@ export function RoundManager({
   onGeneratePairings,
   onRecordResult,
   onUnpairMatch,
+  onUnpairAll,
   onManualPair,
   onPublishRound,
   isPairing,
@@ -140,6 +144,15 @@ export function RoundManager({
             </div>
           </CardHeader>
           <CardContent>
+            {/* Warning when pairing during setup/registration */}
+            {round.pairings.length > 0 &&
+              (tournament.status === 'setup' || tournament.status === 'registration') && (
+                <WarningAlert className="mb-4">
+                  Tournament is still in <strong>{tournament.status}</strong>. Consider
+                  moving it to <strong>in progress</strong> before pairing.
+                </WarningAlert>
+              )}
+
             {/* Pairings table — shown when there are pairings */}
             {round.pairings.length > 0 && (
               <div>
@@ -182,6 +195,18 @@ export function RoundManager({
                     ))}
                   </div>
                 )}
+
+                {canUnpair && round.pairings.every((p) => p.result === 'no_result') && (
+                  <div className="border-t pt-4 mt-4">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onUnpairAll(round.number)}
+                    >
+                      Unpair All
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -194,19 +219,25 @@ export function RoundManager({
 
             {/* Unpaired players section */}
             {unpairedPlayers.length > 0 && round.status !== 'completed' && (
-              <div className={round.pairings.length > 0 ? 'border-t pt-4 mt-4' : ''}>
+              <div className={round.pairings.length > 0 ? 'border-t mt-4' : ''}>
                 <h4 className="font-medium mb-3">
                   Unpaired Players ({unpairedPlayers.length})
                 </h4>
+                {!previousRoundCompleted && (
+                  <WarningAlert className="my-2">
+                    Complete round {activeRound - 1} before pairing round {activeRound}
+                  </WarningAlert>
+                )}
                 <div className="grid gap-1 mb-4">
                   {unpairedPlayers.map((player) => (
                     <label
                       key={player.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-accent cursor-pointer"
+                      className="flex items-center gap-3 px-3 py-1 rounded hover:bg-accent cursor-pointer"
                     >
                       <Checkbox
                         checked={selectedPlayers.has(player.id)}
                         onCheckedChange={() => togglePlayer(player.id)}
+                        disabled={isPairing || !previousRoundCompleted}
                       />
                       <span>{player.name}</span>
                       <span className="text-muted-foreground text-sm">{player.rank}</span>
@@ -232,14 +263,9 @@ export function RoundManager({
                       ? 'Pairing...'
                       : round.pairings.length > 0
                         ? 'Pair Remaining'
-                        : 'Generate Pairings'}
+                        : 'Pair all players'}
                   </Button>
                 </div>
-                {!previousRoundCompleted && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Complete round {activeRound - 1} before pairing round {activeRound}
-                  </p>
-                )}
               </div>
             )}
           </CardContent>
@@ -318,9 +344,14 @@ function PairingRow({
         <span className="text-muted-foreground ml-2">{getPlayerRank(pairing.whitePlayerId)}</span>
       </TableCell>
       <TableCell className="text-muted-foreground">
-        {pairing.handicapStones > 0
-          ? `H${pairing.handicapStones}, K${pairing.komi}`
-          : `Even, K${pairing.komi}`}
+        <span className="inline-flex items-center gap-1">
+          {pairing.handicapStones > 0
+            ? `H${pairing.handicapStones}, K${pairing.komi}`
+            : `Even, K${pairing.komi}`}
+          {pairing.handicapStones >= 4 && (
+            <TriangleAlert className="h-4 w-4 text-amber-500" />
+          )}
+        </span>
       </TableCell>
       <TableCell>
         <Select value={pairing.result} onValueChange={(value) => onRecordResult(value as GameResult)}>

@@ -7,6 +7,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { PlayerStanding, TiebreakerCriteria } from '@/types';
+import { Badge } from '../ui/badge';
 
 interface StandingsTableProps {
   standings: PlayerStanding[];
@@ -32,7 +33,6 @@ export function StandingsTable({ standings, tiebreakerOrder }: StandingsTablePro
         <TableRow>
           <TableHead>Rank</TableHead>
           <TableHead>Player</TableHead>
-          <TableHead>Grade</TableHead>
           <TableHead className="text-right">W-L</TableHead>
           {statColumnsToShow.map((col) => (
             <TableHead key={col} className="text-right">
@@ -45,8 +45,7 @@ export function StandingsTable({ standings, tiebreakerOrder }: StandingsTablePro
         {standings.map((standing) => (
           <TableRow key={standing.playerId}>
             <TableCell className="font-medium">{standing.rank}</TableCell>
-            <TableCell>{standing.playerName}</TableCell>
-            <TableCell className="text-muted-foreground">{standing.playerRank}</TableCell>
+            <TableCell>{standing.playerName}<Badge variant="secondary" className='ml-2'>{standing.playerRank}</Badge></TableCell>
             <TableCell className="text-right">
               {standing.wins}-{standing.losses}
             </TableCell>

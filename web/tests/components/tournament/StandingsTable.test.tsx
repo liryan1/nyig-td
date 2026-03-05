@@ -33,7 +33,6 @@ describe('StandingsTable', () => {
     render(<StandingsTable standings={standings} />);
     expect(screen.getByText('Rank')).toBeInTheDocument();
     expect(screen.getByText('Player')).toBeInTheDocument();
-    expect(screen.getByText('Grade')).toBeInTheDocument();
     expect(screen.getByText('W-L')).toBeInTheDocument();
     expect(screen.getByText('SOS')).toBeInTheDocument();
     expect(screen.getByText('SDS')).toBeInTheDocument();

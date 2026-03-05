@@ -274,6 +274,15 @@ export async function withdrawPlayer(tournamentId: string, playerId: string): Pr
 
   if (!registration) throw new Error('Player not registered');
 
+  const isPaired = tournament.rounds.some(
+    (round) =>
+      round.pairings.some((p) => p.blackPlayerId === playerId || p.whitePlayerId === playerId) ||
+      round.byes.some((b) => b.playerId === playerId)
+  );
+  if (isPaired) {
+    throw new Error('Cannot withdraw a player who has already been paired');
+  }
+
   registration.withdrawn = true;
   tournament.updatedAt = new Date().toISOString();
   return structuredClone(tournament);
@@ -322,6 +331,43 @@ export async function updateRegistration(
   if (data.divisionId !== undefined) {
     registration.divisionId = data.divisionId ?? undefined;
   }
+  tournament.updatedAt = new Date().toISOString();
+  return structuredClone(tournament);
+}
+
+export async function bulkUpdateRegistrations(
+  tournamentId: string,
+  updates: Array<{ playerId: string; roundsParticipating?: number[]; checkedIn?: boolean; withdrawn?: boolean }>
+): Promise<Tournament> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const updatesMap = new Map(updates.map((u) => [u.playerId, u]));
+
+  for (const registration of tournament.registrations) {
+    const id = typeof registration.playerId === 'string' ? registration.playerId : registration.playerId.id;
+    const update = updatesMap.get(id);
+    if (!update) continue;
+    if (update.roundsParticipating !== undefined) {
+      registration.roundsParticipating = update.roundsParticipating;
+    }
+    if (update.checkedIn !== undefined) {
+      registration.checkedIn = update.checkedIn;
+    }
+    if (update.withdrawn !== undefined && update.withdrawn) {
+      const isPaired = tournament.rounds.some(
+        (round) =>
+          round.pairings.some((p) => p.blackPlayerId === id || p.whitePlayerId === id) ||
+          round.byes.some((b) => b.playerId === id)
+      );
+      if (isPaired) {
+        throw new Error('Cannot withdraw a player who has already been paired');
+      }
+      registration.withdrawn = update.withdrawn;
+    }
+  }
+
   tournament.updatedAt = new Date().toISOString();
   return structuredClone(tournament);
 }
@@ -485,6 +531,34 @@ export async function unpairMatch(
   if (round.pairings.length === 0 && round.byes.length === 0) {
     round.status = 'pending';
   }
+
+  tournament.updatedAt = new Date().toISOString();
+  return structuredClone(round);
+}
+
+export async function unpairAll(
+  tournamentId: string,
+  roundNumber: number
+): Promise<Round> {
+  await delay(300);
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+  if (!tournament) throw new Error('Tournament not found');
+
+  const round = tournament.rounds.find((r) => r.number === roundNumber);
+  if (!round) throw new Error('Round not found');
+
+  if (round.status === 'completed') {
+    throw new Error('Cannot unpair a completed round');
+  }
+
+  const hasResults = round.pairings.some((p) => p.result !== 'no_result');
+  if (hasResults) {
+    throw new Error('Cannot unpair all: some matches have recorded results');
+  }
+
+  round.pairings = [];
+  round.byes = [];
+  round.status = 'pending';
 
   tournament.updatedAt = new Date().toISOString();
   return structuredClone(round);

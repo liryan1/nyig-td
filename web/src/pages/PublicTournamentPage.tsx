@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { TriangleAlert } from 'lucide-react';
 import { Spinner } from '@/components/Spinner';
 import { StandingsTable } from '@/components/tournament/StandingsTable';
 import type { Round, Player } from '@/types';
@@ -216,9 +217,14 @@ function PublicRoundCard({
                     <span className="text-muted-foreground ml-2">{getPlayerRank(pairing.whitePlayerId)}</span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {pairing.handicapStones > 0
-                      ? `H${pairing.handicapStones}, K${pairing.komi}`
-                      : `Even, K${pairing.komi}`}
+                    <span className="inline-flex items-center gap-1">
+                      {pairing.handicapStones > 0
+                        ? `H${pairing.handicapStones}, K${pairing.komi}`
+                        : `Even, K${pairing.komi}`}
+                      {pairing.handicapStones >= 4 && (
+                        <TriangleAlert className="h-4 w-4 text-amber-500" title="High handicap" />
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {RESULT_LABELS[pairing.result] || pairing.result}

@@ -590,7 +590,6 @@ class TestStandingsEdgeCases:
         standings = calc.calculate(tournament, through_round=2)
 
         # Verify SOSOS is calculated (sum of opponents' SOS)
-        # In McMahon with bar=3d, SOS values are negative, so SOSOS can be negative too
         alice_standing = next(s for s in standings if s.player.id == alice.id)
         assert alice_standing.sosos != 0  # SOSOS was calculated
 

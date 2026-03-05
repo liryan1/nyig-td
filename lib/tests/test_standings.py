@@ -92,13 +92,12 @@ class TestStandingsCalculator:
         calc = StandingsCalculator()
         standings = calc.calculate(tournament, through_round=2)
 
-        # Default settings use McMahon with bar=3d
-        # Bob (2d): initial_mms=-1, 1 win => MMS=0
-        # Carol (1d): initial_mms=-2, 1 win => MMS=-1
-        # Alice's SOS = Bob's MMS + Carol's MMS = 0 + (-1) = -1
+        # SOS uses wins only (not McMahon initial scores)
+        # Bob: 1 win, Carol: 1 win
+        # Alice's SOS = Bob's wins + Carol's wins = 1 + 1 = 2
         alice_standing = next(s for s in standings if s.player.id == alice.id)
         assert alice_standing.wins == 2.0
-        assert alice_standing.sos == -1.0
+        assert alice_standing.sos == 2.0
 
     def test_sds_calculation(self):
         """Test SDS (Sum of Defeated opponents' Scores)."""
@@ -118,10 +117,10 @@ class TestStandingsCalculator:
         calc = StandingsCalculator()
         standings = calc.calculate(tournament, through_round=1)
 
-        # Default McMahon bar=3d: Bob (2d) has initial_mms=-1, 0 wins => MMS=-1
-        # Alice beat Bob, so SDS = -1
+        # SDS uses wins only: Bob has 0 wins
+        # Alice beat Bob, so SDS = 0
         alice_standing = next(s for s in standings if s.player.id == alice.id)
-        assert alice_standing.sds == -1.0
+        assert alice_standing.sds == 0.0
 
     def test_default_tiebreaker_order_backward_compatible(self):
         """Default tiebreaker order produces same results as before."""

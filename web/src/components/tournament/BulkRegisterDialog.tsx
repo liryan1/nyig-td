@@ -55,15 +55,56 @@ const RANK_PATTERN = /^\d+[kdKD]$/;
 
 const REQUIRED_COLUMNS = ['name', 'aga_id', 'rank'];
 
+const POSITIONAL_COLUMNS = ['name', 'aga_id', 'rank', 'club', 'email'];
+
+function detectHasHeaders(text: string): boolean {
+  const firstLine = text.split('\n')[0] ?? '';
+  const parsed = Papa.parse<string[]>(firstLine, { header: false });
+  const values = (parsed.data[0] || []).map((v) => v.trim().toLowerCase());
+  return REQUIRED_COLUMNS.every((col) => values.includes(col));
+}
+
 export function parseCsvFile(file: File): Promise<Papa.ParseResult<Record<string, string>>> {
   return new Promise((resolve) => {
-    Papa.parse<Record<string, string>>(file, {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(parseCsvString(reader.result as string));
+    };
+    reader.readAsText(file);
+  });
+}
+
+export function parseCsvString(text: string): Papa.ParseResult<Record<string, string>> {
+  if (detectHasHeaders(text)) {
+    return Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (header) => header.trim().toLowerCase(),
-      complete: resolve,
     });
+  }
+
+  // No headers — parse without headers and map columns positionally
+  const raw = Papa.parse<string[]>(text, {
+    header: false,
+    skipEmptyLines: true,
   });
+
+  const data = raw.data.map((row) => {
+    const record: Record<string, string> = {};
+    for (let i = 0; i < row.length && i < POSITIONAL_COLUMNS.length; i++) {
+      record[POSITIONAL_COLUMNS[i]] = row[i];
+    }
+    return record;
+  });
+
+  const maxCols = Math.max(...raw.data.map((r) => r.length), 0);
+  const fields = POSITIONAL_COLUMNS.slice(0, maxCols);
+
+  return {
+    data,
+    errors: raw.errors,
+    meta: { ...raw.meta, fields },
+  } as Papa.ParseResult<Record<string, string>>;
 }
 
 export function validateRows(
@@ -136,12 +177,12 @@ export function categorizeRows(
       return { player, status: 'new' as RowStatus };
     }
 
-    if (registeredPlayerIds.has(dbPlayer.id)) {
-      return { player, status: 'already_registered' as RowStatus, dbName: dbPlayer.name };
-    }
-
     if (dbPlayer.name.toLowerCase() !== player.name.toLowerCase()) {
       return { player, status: 'mismatch' as RowStatus, dbName: dbPlayer.name };
+    }
+
+    if (registeredPlayerIds.has(dbPlayer.id)) {
+      return { player, status: 'already_registered' as RowStatus, dbName: dbPlayer.name };
     }
 
     return { player, status: 'existing' as RowStatus };
@@ -174,13 +215,10 @@ export function BulkRegisterDialog({
   const [, setParsedPlayers] = useState<ParsedPlayer[]>([]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [categorized, setCategorized] = useState<CategorizedRow[]>([]);
+  const [pasteText, setPasteText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const result = await parseCsvFile(file);
+  const processData = (result: Papa.ParseResult<Record<string, string>>) => {
     const { players, errors: validationErrors } = validateRows(result.data, result.meta.fields || []);
 
     setErrors(validationErrors);
@@ -191,6 +229,19 @@ export function BulkRegisterDialog({
       setCategorized(rows);
       setStep('confirm');
     }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await parseCsvFile(file);
+    processData(result);
+  };
+
+  const handlePasteImport = () => {
+    const result = parseCsvString(pasteText);
+    processData(result);
   };
 
   const handleClose = (open: boolean) => {
@@ -199,6 +250,7 @@ export function BulkRegisterDialog({
       setParsedPlayers([]);
       setErrors([]);
       setCategorized([]);
+      setPasteText('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -211,6 +263,7 @@ export function BulkRegisterDialog({
     setParsedPlayers([]);
     setErrors([]);
     setCategorized([]);
+    setPasteText('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -254,6 +307,22 @@ export function BulkRegisterDialog({
               onChange={handleFileChange}
               data-testid="csv-file-input"
             />
+            <div className="text-center text-sm text-muted-foreground">or</div>
+            <textarea
+              className="w-full min-h-30 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder={"John Doe,12345,5k\nJane Smith,67890,3d"}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              data-testid="csv-paste-input"
+            />
+            <Button
+              onClick={handlePasteImport}
+              disabled={pasteText.trim().length === 0}
+              variant="secondary"
+              className="w-full"
+            >
+              Import
+            </Button>
             {errors.length > 0 && (
               <div className="space-y-1" role="alert">
                 {errors.map((error, i) => (
