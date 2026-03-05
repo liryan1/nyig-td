@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getPublicTournament } from '@/services';
+import { Spinner } from '@/components/Spinner';
+import { StandingsTable } from '@/components/tournament/StandingsTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,10 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TriangleAlert } from 'lucide-react';
-import { Spinner } from '@/components/Spinner';
-import { StandingsTable } from '@/components/tournament/StandingsTable';
-import type { Round, Player } from '@/types';
+import { getPublicTournament } from '@/services';
+import type { Player, Round } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 
 const RESULT_LABELS: Record<string, string> = {
   no_result: 'No Result',
@@ -221,9 +220,6 @@ function PublicRoundCard({
                       {pairing.handicapStones > 0
                         ? `H${pairing.handicapStones}, K${pairing.komi}`
                         : `Even, K${pairing.komi}`}
-                      {pairing.handicapStones >= 4 && (
-                        <TriangleAlert className="h-4 w-4 text-amber-500" title="High handicap" />
-                      )}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">

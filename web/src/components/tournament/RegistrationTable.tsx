@@ -274,7 +274,7 @@ export function RegistrationTable({
                           onChangeDivision(playerId, value === 'none' ? null : value)
                         }
                       >
-                        <SelectTrigger className="w-32" aria-label="Division">
+                        <SelectTrigger className="w-32 h-7" aria-label="Division">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

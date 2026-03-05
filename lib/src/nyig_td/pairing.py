@@ -1,7 +1,6 @@
 """Pairing algorithms for Go tournaments."""
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
 import random
@@ -302,113 +301,87 @@ class McMahonPairingEngine(PairingEngine):
         # Get active players
         active_players = tournament.get_active_players(round_number)
 
-        # Calculate McMahon scores
+        # Calculate McMahon scores and sort by MMS desc, then rank desc
         players_with_mm_scores = [
             (p, self.get_mcmahon_score(tournament, p, round_number))
             for p in active_players
         ]
+        players_with_mm_scores.sort(key=lambda x: (-x[1], -x[0].rank.value))
 
         pairings: list[Pairing] = []
         byes: list[Bye] = []
         board_number = 1
 
-        # Group players by MMS into score groups
-        score_groups: dict[float, list[Player]] = defaultdict(list)
-        for player, mm_score in players_with_mm_scores:
-            score_groups[mm_score].append(player)
-
-        sorted_scores = sorted(score_groups.keys(), reverse=True)
-
-        # Handle odd total: select bye player from all candidates
+        # Handle odd total: fair bye selection
         all_players = [p for p, _ in players_with_mm_scores]
         if len(all_players) % 2 == 1:
             bye_player = self._select_bye_player(all_players, tournament, round_number)
-            score_groups[self.get_mcmahon_score(tournament, bye_player, round_number)].remove(bye_player)
+            players_with_mm_scores = [
+                (p, s) for p, s in players_with_mm_scores if p.id != bye_player.id
+            ]
             byes.append(Bye(player_id=bye_player.id))
             warnings.append(f"Bye given to {bye_player.name}")
-            # Remove empty score groups
-            score_groups = {k: v for k, v in score_groups.items() if v}
-            sorted_scores = sorted(score_groups.keys(), reverse=True)
 
-        floater: Optional[Player] = None
+        # Build MMS lookup and unpaired list (ordered by MMS desc, rank desc)
+        mm_scores: dict[str, float] = {p.id: s for p, s in players_with_mm_scores}
+        unpaired = [p for p, _ in players_with_mm_scores]
 
-        for idx, score in enumerate(sorted_scores):
-            group = score_groups[score]
+        # Pair greedily: process from highest MMS, prefer closest-MMS non-repeat
+        while unpaired:
+            player = unpaired.pop(0)
+            player_mm = mm_scores[player.id]
+            previous_opponents = self._get_previous_opponents(
+                tournament, player.id, round_number
+            )
 
-            if floater:
-                group.insert(0, floater)  # Add floater at top (from higher group)
-                floater = None
+            # Find best opponent: closest MMS that isn't a repeat
+            opponent: Optional[Player] = None
+            best_score_diff = float('inf')
 
-            # Sort by rank descending (strongest first within group)
-            group.sort(key=lambda p: -p.rank.value)
+            for candidate in unpaired:
+                if candidate.id in previous_opponents:
+                    continue
+                score_diff = abs(player_mm - mm_scores[candidate.id])
+                if score_diff < best_score_diff:
+                    best_score_diff = score_diff
+                    opponent = candidate
 
-            if len(group) % 2 == 1:
-                if idx == len(sorted_scores) - 1:
-                    # Last group — give bye to weakest if no bye yet, else just pop
-                    if not byes:
-                        bye_candidate = self._select_bye_player(group, tournament, round_number)
-                        group.remove(bye_candidate)
-                        byes.append(Bye(player_id=bye_candidate.id))
-                        warnings.append(f"Bye given to {bye_candidate.name}")
-                    else:
-                        # Float to create a pair with leftover — handled after loop
-                        floater = group.pop()
-                else:
-                    # Float weakest player down to next group
-                    floater = group.pop()
-
-            # Split and pair within group: top half vs bottom half
-            mid = len(group) // 2
-            top_half = group[:mid]
-            bottom_half = group[mid:]
-
-            for i in range(len(top_half)):
-                player = top_half[i]
-                opponent = bottom_half[i]
-                previous_opponents = self._get_previous_opponents(
-                    tournament, player.id, round_number
+            if opponent is None and unpaired:
+                # All remaining are previous opponents — pick closest MMS
+                opponent = min(
+                    unpaired,
+                    key=lambda c: abs(player_mm - mm_scores[c.id]),
+                )
+                warnings.append(
+                    f"Repeat pairing: {player.name} vs {opponent.name}"
                 )
 
-                # Swap within bottom half to avoid repeats
-                if opponent.id in previous_opponents:
-                    swapped = False
-                    for j in range(len(bottom_half)):
-                        if j != i and bottom_half[j].id not in previous_opponents:
-                            # Also check the player at position j isn't a repeat for top_half[j]
-                            bottom_half[i], bottom_half[j] = bottom_half[j], bottom_half[i]
-                            opponent = bottom_half[i]
-                            swapped = True
-                            break
-                    if not swapped:
-                        warnings.append(
-                            f"Repeat pairing: {player.name} vs {opponent.name}"
-                        )
+            if opponent is None:
+                byes.append(Bye(player_id=player.id))
+                continue
 
-                # Assign colors
-                black, white = self._assign_colors(
-                    tournament, player, opponent, round_number
-                )
+            unpaired.remove(opponent)
 
-                # Calculate handicap
-                if tournament.settings.handicap_type != HandicapType.NONE:
-                    handicap = handicap_calc.calculate(white.rank, black.rank)
-                else:
-                    handicap = handicap_calc.calculate(white.rank, white.rank)
+            # Assign colors
+            black, white = self._assign_colors(
+                tournament, player, opponent, round_number
+            )
 
-                pairing = Pairing.create(
-                    black_player_id=black.id,
-                    white_player_id=white.id,
-                    board_number=board_number,
-                    handicap_stones=handicap.stones,
-                    komi=handicap.komi,
-                )
-                pairings.append(pairing)
-                board_number += 1
+            # Calculate handicap
+            if tournament.settings.handicap_type != HandicapType.NONE:
+                handicap = handicap_calc.calculate(white.rank, black.rank)
+            else:
+                handicap = handicap_calc.calculate(white.rank, white.rank)
 
-        # Handle leftover floater after all groups processed
-        if floater:
-            byes.append(Bye(player_id=floater.id))
-            warnings.append(f"Bye given to {floater.name}")
+            pairing = Pairing.create(
+                black_player_id=black.id,
+                white_player_id=white.id,
+                board_number=board_number,
+                handicap_stones=handicap.stones,
+                komi=handicap.komi,
+            )
+            pairings.append(pairing)
+            board_number += 1
 
         return PairingResult(pairings=pairings, byes=byes, warnings=warnings)
 
